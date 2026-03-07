@@ -22,7 +22,7 @@ export default function LoginPage() {
       await login(username, password);
       navigate('/');
     } catch {
-      setError('Authentication failed. Try Dev Login with your covi3.com session.');
+      setError('Invalid username or password.');
     } finally {
       setLoading(false);
     }

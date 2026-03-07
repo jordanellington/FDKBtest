@@ -15,96 +15,119 @@ app.use(express.json());
 // Store sessions in memory (dev only)
 const sessions = new Map();
 
-// --------------- Auth ---------------
+// --------------- CAS SSO Login Helper ---------------
 
-// Login: accepts JSESSIONID cookie from covi3.com for CAS SSO passthrough
-app.post('/api/auth/login', async (req, res) => {
-  const { username, password, jsessionId } = req.body;
+// Authenticates through CAS SSO and returns a JSESSIONID for Alfresco Share
+async function casLogin(username, password) {
+  const CAS_LOGIN = `${ALFRESCO_BASE.replace('secure.', 'secure-login.')}/cas/login`;
+  const SERVICE_URL = `${ALFRESCO_BASE}/share/page`;
 
-  // Strategy 1: JSESSIONID cookie forwarding (CAS SSO)
-  if (jsessionId) {
-    try {
-      const profileResp = await fetch(`${SHARE_PROXY}/api/people/${encodeURIComponent(username || 'admin')}`, {
-        headers: { 'Cookie': `JSESSIONID=${jsessionId}` }
-      });
-      if (!profileResp.ok) {
-        return res.status(401).json({ error: 'Invalid session' });
-      }
-      const profile = await profileResp.json();
-      const sessionId = Buffer.from(`${profile.userName}:${Date.now()}`).toString('base64');
-      sessions.set(sessionId, { jsessionId, username: profile.userName });
+  // Step 1: GET the CAS login page to get the form tokens
+  const loginPageResp = await fetch(`${CAS_LOGIN}?service=${encodeURIComponent(SERVICE_URL)}`, {
+    redirect: 'manual',
+  });
+  const loginPageHtml = await loginPageResp.text();
+  const casPageCookies = (loginPageResp.headers.raw()['set-cookie'] || [])
+    .map(c => c.split(';')[0]).join('; ');
 
-      return res.json({
-        sessionId,
-        user: {
-          username: profile.userName,
-          firstName: profile.firstName || profile.userName,
-          lastName: profile.lastName || '',
-          email: profile.email || ''
-        }
-      });
-    } catch (err) {
-      console.error('JSESSIONID login error:', err);
-      return res.status(500).json({ error: 'Session validation failed' });
+  // Extract hidden form fields
+  const executionMatch = loginPageHtml.match(/name="execution"\s+value="([^"]+)"/);
+  if (!executionMatch) throw new Error('Could not parse CAS login page');
+  const execution = executionMatch[1];
+
+  // Step 2: POST credentials to CAS
+  const formBody = new URLSearchParams({
+    username,
+    password,
+    execution,
+    _eventId: 'submit',
+    geolocation: '',
+  });
+
+  const casPostResp = await fetch(`${CAS_LOGIN}?service=${encodeURIComponent(SERVICE_URL)}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'Cookie': casPageCookies,
+    },
+    body: formBody.toString(),
+    redirect: 'manual',
+  });
+
+  // CAS should redirect back to Share with a ticket param
+  const casRedirectUrl = casPostResp.headers.get('location');
+  if (!casRedirectUrl || !casRedirectUrl.includes('ticket=')) {
+    // Check if CAS returned an error (bad credentials)
+    const body = await casPostResp.text();
+    if (body.includes('credentials you provided cannot be determined to be authentic') ||
+        body.includes('Invalid credentials') ||
+        body.includes('authentication error')) {
+      throw new Error('INVALID_CREDENTIALS');
+    }
+    throw new Error('CAS did not redirect with ticket');
+  }
+
+  // Step 3: Follow redirect to Share (this sets the JSESSIONID)
+  const shareResp = await fetch(casRedirectUrl, { redirect: 'manual' });
+  const shareCookies = shareResp.headers.raw()['set-cookie'] || [];
+  let jsessionId = null;
+  for (const cookie of shareCookies) {
+    const match = cookie.match(/JSESSIONID=([^;]+)/);
+    if (match) { jsessionId = match[1]; break; }
+  }
+
+  // Sometimes Share does another redirect — follow it to finalize the session
+  if (!jsessionId && shareResp.headers.get('location')) {
+    const nextResp = await fetch(shareResp.headers.get('location'), {
+      redirect: 'manual',
+      headers: { 'Cookie': shareCookies.map(c => c.split(';')[0]).join('; ') },
+    });
+    const nextCookies = nextResp.headers.raw()['set-cookie'] || [];
+    for (const cookie of [...shareCookies, ...nextCookies]) {
+      const match = cookie.match(/JSESSIONID=([^;]+)/);
+      if (match) { jsessionId = match[1]; break; }
     }
   }
 
-  // Strategy 2: Direct ticket API (works when CAS is not enforced)
+  if (!jsessionId) throw new Error('Failed to obtain JSESSIONID from Share');
+  return jsessionId;
+}
+
+// --------------- Auth ---------------
+
+app.post('/api/auth/login', async (req, res) => {
+  const { username, password } = req.body;
+
   try {
-    const resp = await fetch(`${ALFRESCO_API}/authentication/versions/1/tickets`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId: username, password })
+    // Authenticate through CAS SSO
+    const jsessionId = await casLogin(username, password);
+    console.log('[auth] CAS login succeeded for', username);
+
+    // Validate session and get profile
+    const profileResp = await fetch(`${SHARE_PROXY}/api/people/${encodeURIComponent(username)}`, {
+      headers: { 'Cookie': `JSESSIONID=${jsessionId}` }
     });
-
-    if (!resp.ok) {
-      const text = await resp.text();
-      console.error('Alfresco ticket auth failed:', resp.status, text);
-      // Fall back: try Share proxy with Basic auth
-      const basicAuth = Buffer.from(`${username}:${password}`).toString('base64');
-      const shareResp = await fetch(`${SHARE_PROXY}/api/people/${encodeURIComponent(username)}`, {
-        headers: { 'Authorization': `Basic ${basicAuth}` }
-      });
-      if (!shareResp.ok) {
-        return res.status(401).json({ error: 'Invalid credentials' });
-      }
-      const profile = await shareResp.json();
-      const sessionId = Buffer.from(`${username}:${Date.now()}`).toString('base64');
-      // Store with basic auth for subsequent calls
-      sessions.set(sessionId, { basicAuth, username });
-      return res.json({
-        sessionId,
-        user: {
-          username,
-          firstName: profile.firstName || username,
-          lastName: profile.lastName || '',
-          email: profile.email || ''
-        }
-      });
-    }
-
-    const data = await resp.json();
-    const ticket = data.entry.id;
-    const sessionId = Buffer.from(`${username}:${Date.now()}`).toString('base64');
-    sessions.set(sessionId, { ticket, username });
-
-    const profileResp = await fetch(
-      `${ALFRESCO_API}/alfresco/versions/1/people/${encodeURIComponent(username)}?alf_ticket=${encodeURIComponent(ticket)}`
-    );
     const profile = profileResp.ok ? await profileResp.json() : null;
+    const resolvedUsername = profile?.userName || username;
+
+    const sessionId = Buffer.from(`${resolvedUsername}:${Date.now()}`).toString('base64');
+    sessions.set(sessionId, { jsessionId, username: resolvedUsername });
 
     res.json({
       sessionId,
       user: {
-        username,
-        firstName: profile?.entry?.firstName || username,
-        lastName: profile?.entry?.lastName || '',
-        email: profile?.entry?.email || ''
+        username: resolvedUsername,
+        firstName: profile?.firstName || resolvedUsername,
+        lastName: profile?.lastName || '',
+        email: profile?.email || ''
       }
     });
   } catch (err) {
-    console.error('Login error:', err);
-    res.status(500).json({ error: 'Authentication failed' });
+    console.error('[auth] Login error:', err.message);
+    if (err.message === 'INVALID_CREDENTIALS') {
+      return res.status(401).json({ error: 'Invalid username or password' });
+    }
+    res.status(401).json({ error: 'Authentication failed' });
   }
 });
 

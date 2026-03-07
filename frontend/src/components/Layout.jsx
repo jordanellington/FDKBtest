@@ -57,10 +57,10 @@ export default function Layout() {
         fixed inset-y-0 left-0 z-50 w-[260px] transform transition-transform duration-300
         ${menuOpen ? 'translate-x-0' : '-translate-x-full'}
         md:static md:translate-x-0 md:w-[220px] md:z-auto
-        flex flex-col shrink-0 bg-bg-sidebar border-r border-border pt-7
+        flex flex-col shrink-0 bg-bg-sidebar border-r border-border pt-9
       `}>
         {/* Logo */}
-        <div className="px-5 pl-[22px] mb-10">
+        <div className="px-5 pl-7 mb-10">
           <p className="text-[10px] font-bold tracking-[0.32em] uppercase text-text-muted mb-1">
             Covington
           </p>

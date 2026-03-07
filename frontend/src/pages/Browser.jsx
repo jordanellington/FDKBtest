@@ -110,8 +110,7 @@ export default function Browser() {
               initial={{ opacity: 0, y: 6 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.3 }}
-              className="flex items-center gap-3"
-              className="px-4 pt-4 mb-4 sm:px-8 md:px-14 md:pt-5 md:mb-5"
+              className="flex items-center gap-3 px-4 pt-4 mb-4 sm:px-8 md:px-14 md:pt-5 md:mb-5"
             >
               <button
                 onClick={() => {

@@ -30,7 +30,7 @@ export default function Layout() {
             Covington
           </p>
           <h1 className="font-display text-[36px] font-normal text-text-primary leading-none">FDKB v2.0</h1>
-          <p className="text-[10px] font-medium text-text-dim mt-1.5 tracking-[0.08em]">beta</p>
+          <span className="inline-block mt-2 text-[10px] font-bold tracking-[0.14em] uppercase text-accent bg-accent/10 px-2 py-0.5 rounded">beta</span>
         </div>
 
         <div className="h-px bg-border mx-5 mb-4" />
@@ -93,10 +93,11 @@ export default function Layout() {
             </div>
             <button
               onClick={handleLogout}
-              className="p-1.5 rounded text-text-muted hover:text-text-secondary hover:bg-white/[0.04] transition-colors"
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-[11px] font-medium text-text-muted hover:text-white hover:bg-white/[0.06] transition-colors"
               title="Sign out"
             >
-              <LogOut size={13} strokeWidth={1.4} />
+              <LogOut size={13} strokeWidth={1.6} />
+              <span>Logout</span>
             </button>
           </div>
         </div>

@@ -56,12 +56,13 @@ async function casLogin(username, password) {
 
   // CAS should redirect back to Share with a ticket param
   const casRedirectUrl = casPostResp.headers.get('location');
+  console.log('[auth] CAS POST status:', casPostResp.status, '| redirect:', casRedirectUrl?.substring(0, 120));
   if (!casRedirectUrl || !casRedirectUrl.includes('ticket=')) {
-    // Check if CAS returned an error (bad credentials)
     const body = await casPostResp.text();
-    if (body.includes('credentials you provided cannot be determined to be authentic') ||
-        body.includes('Invalid credentials') ||
-        body.includes('authentication error')) {
+    // Log a snippet to diagnose
+    const snippet = body.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').substring(0, 300);
+    console.log('[auth] CAS response snippet:', snippet);
+    if (body.includes('credentials') || body.includes('nvalid') || body.includes('error') || body.includes('denied')) {
       throw new Error('INVALID_CREDENTIALS');
     }
     throw new Error('CAS did not redirect with ticket');

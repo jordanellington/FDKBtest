@@ -1,0 +1,8 @@
+node_modules/
+dist/
+.env
+.env.*
+*.pem
+.DS_Store
+.playwright-mcp/
+.claude/

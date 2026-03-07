@@ -70,7 +70,7 @@ function PdfViewer({ fileUrl, searchQuery }) {
       <div className="h-full flex flex-col rpv-dark-theme">
         {/* Custom toolbar */}
         <div
-          className="shrink-0 flex items-center justify-between"
+          className="viewer-toolbar shrink-0 flex items-center justify-between"
           style={{
             padding: '6px 12px',
             background: '#1a1e1c',
@@ -231,7 +231,7 @@ export default function DocumentViewer({ document: doc, searchQuery, onClose }) 
     >
       {/* Header */}
       <div
-        className="flex items-center justify-between gap-3 shrink-0"
+        className="viewer-header flex items-center justify-between gap-3 shrink-0"
         style={{ padding: '10px 16px', borderBottom: '1px solid rgba(255,255,255,0.04)' }}
       >
         <div className="flex items-center gap-2 min-w-0 flex-1">
@@ -306,7 +306,7 @@ export default function DocumentViewer({ document: doc, searchQuery, onClose }) 
 
       {/* Compact metadata bar + expandable details */}
       <div style={{ borderTop: '1px solid rgba(255,255,255,0.04)' }} className="shrink-0">
-        <div className="flex items-center gap-4 text-[11px] text-text-secondary" style={{ padding: '8px 16px' }}>
+        <div className="viewer-meta-bar flex items-center gap-4 text-[11px] text-text-secondary" style={{ padding: '8px 16px' }}>
           <span className="flex items-center gap-1.5">
             <User size={10} className="text-text-muted" />
             {meta.author}

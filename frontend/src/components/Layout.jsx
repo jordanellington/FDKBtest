@@ -61,7 +61,7 @@ export default function Layout() {
       `}>
         {/* Logo */}
         <div className="px-5 pl-8 mb-10">
-          <p className="text-[10px] font-bold tracking-[0.32em] uppercase text-text-muted mb-1">
+          <p className="text-[10px] font-bold tracking-[0.32em] uppercase text-text-muted mb-3">
             Covington
           </p>
           <h1 className="font-display text-[36px] font-normal text-text-primary leading-none">FDKB v2.0</h1>

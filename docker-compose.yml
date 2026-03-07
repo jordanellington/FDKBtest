@@ -13,7 +13,7 @@ services:
   frontend:
     build: ./frontend
     ports:
-      - "5180:5173"
+      - "5180:5180"
     environment:
       - VITE_API_URL=http://localhost:3001
     volumes:

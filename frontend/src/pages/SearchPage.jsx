@@ -106,12 +106,11 @@ export default function SearchPage() {
             initial={{ opacity: 0, y: 14 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.45 }}
-            className={results ? "px-4 pt-5 sm:px-6 md:px-7" : "px-4 pt-8 sm:px-8 md:px-14 md:pt-11"}
-            style={{ marginBottom: results ? 16 : 32, transition: 'all 0.3s ease' }}
+            style={{ padding: results ? '24px 28px 0' : '44px 56px 0', marginBottom: results ? 16 : 32, transition: 'all 0.3s ease' }}
           >
             <h1
-              className={`font-display font-light text-white leading-[1.08] tracking-[-0.02em] ${results ? '' : 'text-[28px] sm:text-[36px] md:text-[42px]'}`}
-              style={{ fontSize: results ? 24 : undefined, marginBottom: results ? 6 : 10, transition: 'all 0.3s ease' }}
+              className="page-title font-display font-light text-white leading-[1.08] tracking-[-0.02em]"
+              style={{ fontSize: results ? 24 : 42, marginBottom: results ? 6 : 10, transition: 'all 0.3s ease' }}
             >
               Search
             </h1>
@@ -125,7 +124,7 @@ export default function SearchPage() {
             initial={{ opacity: 0, y: 14 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.05, duration: 0.45 }}
-            className={results ? "px-4 pb-4 sm:px-6 md:px-7" : "px-4 pb-6 sm:px-8 sm:pb-8 md:px-14 md:pb-10"}
+            style={{ padding: results ? '0 28px 20px' : '0 56px 40px' }}
           >
             <form onSubmit={(e) => { e.preventDefault(); handleSearch(); }}>
               <div
@@ -265,7 +264,8 @@ export default function SearchPage() {
               initial={{ opacity: 0, y: 14 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1, duration: 0.45 }}
-              className="px-4 pb-10 sm:px-8 md:px-14 md:pb-14"
+              className="page-section"
+              style={{ padding: '0 56px 56px' }}
             >
               <p className="text-[10px] text-text-muted uppercase tracking-wider font-semibold" style={{ marginBottom: 16 }}>Popular Searches</p>
               <div className="flex flex-wrap gap-2" style={{ marginBottom: 40 }}>
@@ -332,10 +332,10 @@ export default function SearchPage() {
               initial={{ opacity: 0, y: 14 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4 }}
-              className="px-4 pb-8 sm:px-6 md:px-7 md:pb-10"
+              style={{ padding: '0 28px 40px' }}
             >
               {/* Results summary bar */}
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between" style={{ marginBottom: 12, padding: '0 4px' }}>
+              <div className="results-summary-bar flex items-center justify-between" style={{ marginBottom: 12, padding: '0 4px' }}>
                 <div>
                   <span style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>
                     Showing <em style={{ fontStyle: 'normal', color: 'var(--color-accent)', fontWeight: 600 }}>{results.length.toLocaleString()}</em> of{' '}
@@ -453,9 +453,9 @@ export default function SearchPage() {
                             {doc.name}
                           </span>
                           <div style={{ flex: 1 }} />
-                          <span className="hidden sm:inline" style={{ fontSize: 11, color: 'var(--color-text-muted)', fontVariantNumeric: 'tabular-nums' }}>{pages} pg</span>
-                          <span className="hidden md:inline" style={{ fontSize: 11, color: 'var(--color-text-muted)', fontVariantNumeric: 'tabular-nums', minWidth: 54, textAlign: 'right' }}>{size}</span>
-                          <span className="hidden sm:inline" style={{ fontSize: 11, color: 'var(--color-text-muted)', fontVariantNumeric: 'tabular-nums', minWidth: 60, textAlign: 'right' }}>{modified}</span>
+                          <span className="result-meta-pages" style={{ fontSize: 11, color: 'var(--color-text-muted)', fontVariantNumeric: 'tabular-nums' }}>{pages} pg</span>
+                          <span className="result-meta-size" style={{ fontSize: 11, color: 'var(--color-text-muted)', fontVariantNumeric: 'tabular-nums', minWidth: 54, textAlign: 'right' }}>{size}</span>
+                          <span className="result-meta-date" style={{ fontSize: 11, color: 'var(--color-text-muted)', fontVariantNumeric: 'tabular-nums', minWidth: 60, textAlign: 'right' }}>{modified}</span>
                         </div>
 
                         {/* Bottom line: publisher + status badge (right) */}

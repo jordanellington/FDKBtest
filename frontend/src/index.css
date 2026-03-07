@@ -197,13 +197,103 @@ body {
   box-shadow: 0 2px 12px rgba(0,0,0,0.4);
 }
 
-/* DocumentViewer responsive panel */
+/* ===== Mobile Responsive Overrides ===== */
+
+/* DocumentViewer: full-screen on mobile, side panel on desktop */
+@media (max-width: 767px) {
+  .document-viewer-panel {
+    position: fixed !important;
+    inset: 0 !important;
+    z-index: 50 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+  }
+}
 @media (min-width: 768px) {
   .document-viewer-panel {
     width: 728px;
     max-width: 50%;
     min-width: 340px;
     flex: 0 1 auto;
+  }
+}
+
+/* AiChat: full-screen on mobile, side panel on desktop */
+@media (max-width: 767px) {
+  .ai-chat-panel {
+    position: fixed !important;
+    inset: 0 !important;
+    z-index: 50 !important;
+    width: 100% !important;
+  }
+}
+
+/* Page sections: tighter padding on mobile */
+@media (max-width: 767px) {
+  .page-section {
+    padding-left: 20px !important;
+    padding-right: 20px !important;
+  }
+  .page-section-hero {
+    padding-top: 28px !important;
+    padding-left: 20px !important;
+    padding-right: 20px !important;
+  }
+  .page-title {
+    font-size: 22px !important;
+  }
+  .page-subtitle {
+    margin-bottom: 16px !important;
+  }
+  .stats-row {
+    gap: 20px !important;
+  }
+  .stats-number {
+    font-size: 20px !important;
+  }
+  .section-heading {
+    font-size: 20px !important;
+  }
+  .subject-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .collections-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .result-meta-pages,
+  .result-meta-size,
+  .result-meta-date {
+    display: none !important;
+  }
+  .results-summary-bar {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 8px !important;
+  }
+  .details-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+@media (min-width: 640px) and (max-width: 767px) {
+  .page-section {
+    padding-left: 32px !important;
+    padding-right: 32px !important;
+  }
+  .page-section-hero {
+    padding-top: 36px !important;
+    padding-left: 32px !important;
+    padding-right: 32px !important;
+  }
+  .page-title {
+    font-size: 36px !important;
+  }
+  .subject-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+  .collections-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
   }
 }
 

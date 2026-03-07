@@ -98,9 +98,10 @@ export default function Browser() {
               initial={{ opacity: 0, y: 14 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.45 }}
-              className="px-4 pt-8 mb-6 sm:px-8 sm:pt-10 md:px-14 md:pt-11 md:mb-8"
+              className="page-section-hero"
+              style={{ padding: '44px 56px 0', marginBottom: 32 }}
             >
-              <h1 className="font-display text-[28px] sm:text-[36px] md:text-[42px] font-light text-white leading-[1.08] tracking-[-0.02em]" style={{ marginBottom: 10 }}>
+              <h1 className="page-title font-display text-[42px] font-light text-white leading-[1.08] tracking-[-0.02em]" style={{ marginBottom: 10 }}>
                 Documents
               </h1>
               <p className="text-text-muted text-[14px]">Browse the complete FDKB document library</p>
@@ -110,7 +111,8 @@ export default function Browser() {
               initial={{ opacity: 0, y: 6 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.3 }}
-              className="flex items-center gap-3 px-4 pt-4 mb-4 sm:px-8 md:px-14 md:pt-5 md:mb-5"
+              className="page-section flex items-center gap-3"
+              style={{ padding: '20px 56px 0', marginBottom: 20 }}
             >
               <button
                 onClick={() => {
@@ -139,13 +141,14 @@ export default function Browser() {
                   initial={{ opacity: 0, y: 14 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.05, duration: 0.45 }}
-                  className="px-4 pb-10 sm:px-8 md:px-14 md:pb-14"
+                  className="page-section"
+                  style={{ padding: '0 56px 56px' }}
                 >
                   <div className="flex items-baseline justify-between" style={{ marginBottom: 20 }}>
-                    <h2 className="font-display text-[24px] font-normal text-white">Subject Areas</h2>
+                    <h2 className="section-heading font-display text-[24px] font-normal text-white">Subject Areas</h2>
                     <span className="text-[11px] font-medium text-text-muted">{numbered.length} areas</span>
                   </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-1.5">
+                  <div className="subject-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6 }}>
                     {numbered.map(folder => {
                       const num = folder.name.match(/^[\d.]+/)?.[0] || '';
                       const title = folder.name.replace(/^[\d.]+ /, '');
@@ -185,10 +188,11 @@ export default function Browser() {
                   initial={{ opacity: 0, y: 14 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.1, duration: 0.45 }}
-                  className="px-4 pb-14 sm:px-8 md:px-14 md:pb-20"
+                  className="page-section"
+                  style={{ padding: '0 56px 80px' }}
                 >
-                  <h2 className="font-display text-[24px] font-normal text-white" style={{ marginBottom: 20 }}>Special Collections</h2>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-8">
+                  <h2 className="section-heading font-display text-[24px] font-normal text-white" style={{ marginBottom: 20 }}>Special Collections</h2>
+                  <div className="collections-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0 32px' }}>
                     {special.map((f, i) => {
                       const h = hoveredCol === i;
                       return (
@@ -212,7 +216,7 @@ export default function Browser() {
             </>
           ) : (
             /* Sub-folder level */
-            <div className="px-4 pb-10 sm:px-8 md:px-14 md:pb-14">
+            <div className="page-section" style={{ padding: '0 56px 56px' }}>
               {/* Folders */}
               {folders.length > 0 && (
                 <div className="mb-10">
@@ -302,9 +306,9 @@ export default function Browser() {
                               {file.name}
                             </span>
                             <div style={{ flex: 1 }} />
-                            <span className="hidden sm:inline" style={{ fontSize: 11, color: 'var(--color-text-muted)', fontVariantNumeric: 'tabular-nums' }}>{pages} pg</span>
-                            <span className="hidden md:inline" style={{ fontSize: 11, color: 'var(--color-text-muted)', fontVariantNumeric: 'tabular-nums', minWidth: 54, textAlign: 'right' }}>{size}</span>
-                            <span className="hidden sm:inline" style={{ fontSize: 11, color: 'var(--color-text-muted)', fontVariantNumeric: 'tabular-nums', minWidth: 60, textAlign: 'right' }}>{modified}</span>
+                            <span className="result-meta-pages" style={{ fontSize: 11, color: 'var(--color-text-muted)', fontVariantNumeric: 'tabular-nums' }}>{pages} pg</span>
+                            <span className="result-meta-size" style={{ fontSize: 11, color: 'var(--color-text-muted)', fontVariantNumeric: 'tabular-nums', minWidth: 54, textAlign: 'right' }}>{size}</span>
+                            <span className="result-meta-date" style={{ fontSize: 11, color: 'var(--color-text-muted)', fontVariantNumeric: 'tabular-nums', minWidth: 60, textAlign: 'right' }}>{modified}</span>
                           </div>
 
                           <div className="flex items-center" style={{ paddingLeft: 23, gap: 10 }}>

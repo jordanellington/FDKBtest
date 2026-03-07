@@ -226,8 +226,8 @@ export default function DocumentViewer({ document: doc, searchQuery, onClose }) 
       animate={{ x: 0, opacity: 1 }}
       exit={{ x: '100%', opacity: 0 }}
       transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-      className="flex flex-col h-full fixed inset-0 z-50 md:static md:inset-auto md:z-auto document-viewer-panel"
-      style={{ background: 'var(--color-bg-secondary)', borderLeft: '1px solid rgba(255,255,255,0.07)' }}
+      className="document-viewer-panel flex flex-col h-full"
+      style={{ width: 728, maxWidth: '50%', minWidth: 340, flex: '0 1 auto', background: 'var(--color-bg-secondary)', borderLeft: '1px solid rgba(255,255,255,0.07)' }}
     >
       {/* Header */}
       <div
@@ -306,7 +306,7 @@ export default function DocumentViewer({ document: doc, searchQuery, onClose }) 
 
       {/* Compact metadata bar + expandable details */}
       <div style={{ borderTop: '1px solid rgba(255,255,255,0.04)' }} className="shrink-0">
-        <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-[11px] text-text-secondary" style={{ padding: '8px 16px' }}>
+        <div className="flex items-center gap-4 text-[11px] text-text-secondary" style={{ padding: '8px 16px' }}>
           <span className="flex items-center gap-1.5">
             <User size={10} className="text-text-muted" />
             {meta.author}
@@ -341,7 +341,7 @@ export default function DocumentViewer({ document: doc, searchQuery, onClose }) 
 
         {detailsOpen && (
           <div style={{ padding: '4px 16px 14px', borderTop: '1px solid rgba(255,255,255,0.04)' }}>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="details-grid grid grid-cols-3 gap-3">
               <div>
                 <p className="text-[9px] text-text-muted uppercase tracking-wider mb-1">Topic</p>
                 <p className="text-[11px] text-text-secondary">{meta.topic}</p>

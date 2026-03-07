@@ -37,11 +37,11 @@ export default function AiChat({ onClose }) {
 
   return (
     <motion.div
-      initial={{ x: '100%', opacity: 0 }}
+      initial={{ x: 380, opacity: 0 }}
       animate={{ x: 0, opacity: 1 }}
-      exit={{ x: '100%', opacity: 0 }}
+      exit={{ x: 380, opacity: 0 }}
       transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-      className="fixed inset-0 z-50 md:static md:inset-auto md:z-auto md:w-[380px] bg-bg-secondary border-l border-border flex flex-col shrink-0 h-full"
+      className="w-[380px] bg-bg-secondary border-l border-border flex flex-col shrink-0 h-full"
     >
       {/* Header */}
       <div className="px-5 py-4 border-b border-border flex items-center justify-between">

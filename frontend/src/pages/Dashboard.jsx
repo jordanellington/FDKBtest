@@ -89,32 +89,33 @@ export default function Dashboard() {
         initial={{ opacity: 0, y: 14 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.45 }}
-        className="px-4 pt-8 sm:px-8 sm:pt-10 md:px-14 md:pt-11"
+        className="page-section-hero"
+        style={{ padding: '44px 56px 0' }}
       >
-        <h1 className="font-display text-[28px] sm:text-[36px] md:text-[42px] font-light text-white leading-[1.08] tracking-[-0.02em]"
+        <h1 className="page-title font-display text-[42px] font-light text-white leading-[1.08] tracking-[-0.02em]"
           style={{ marginBottom: 10 }}>
           Food &amp; Drug Knowledge Base
         </h1>
-        <p className="text-text-muted text-[14px]" style={{ marginBottom: 28 }}>
+        <p className="page-subtitle text-text-muted text-[14px]" style={{ marginBottom: 28 }}>
           Selected practice materials, 1947 to present
         </p>
 
         {/* Bloomberg-style ticker */}
-        <div className="flex flex-wrap items-baseline gap-6 sm:gap-8 md:gap-12 pb-7 border-b border-white/[0.04]">
+        <div className="stats-row flex flex-wrap items-baseline" style={{ gap: 48, paddingBottom: 28, borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
           <div className="flex items-baseline" style={{ gap: 10 }}>
-            <span className="font-display text-[28px] font-light text-accent-bright leading-none">
+            <span className="stats-number font-display text-[28px] font-light text-accent-bright leading-none">
               <Counter target={totalDocs} />
             </span>
             <span className="text-[10px] font-semibold tracking-[0.1em] text-text-muted">DOCUMENTS</span>
           </div>
           <div className="flex items-baseline" style={{ gap: 10 }}>
-            <span className="font-display text-[28px] font-light text-accent-bright leading-none">
+            <span className="stats-number font-display text-[28px] font-light text-accent-bright leading-none">
               {stats?.practiceAreas || numbered.length || 22}
             </span>
             <span className="text-[10px] font-semibold tracking-[0.1em] text-text-muted">SUBJECT AREAS</span>
           </div>
           <div className="flex items-baseline" style={{ gap: 10 }}>
-            <span className="font-display text-[28px] font-light text-accent-bright leading-none">
+            <span className="stats-number font-display text-[28px] font-light text-accent-bright leading-none">
               {stats?.yearRange || '1947 – Present'}
             </span>
             <span className="text-[10px] font-semibold tracking-[0.1em] text-text-muted">COVERAGE</span>
@@ -127,7 +128,8 @@ export default function Dashboard() {
         initial={{ opacity: 0, y: 14 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1, duration: 0.45 }}
-        className="px-4 py-6 sm:px-8 sm:py-8 md:px-14 md:py-10"
+        className="page-section"
+        style={{ padding: '36px 56px 40px' }}
       >
         <form onSubmit={handleSearch}>
           <div
@@ -262,10 +264,11 @@ export default function Dashboard() {
         initial={{ opacity: 0, y: 14 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.15, duration: 0.45 }}
-        className="px-4 pb-8 sm:px-8 md:px-14 md:pb-10"
+        className="page-section"
+        style={{ padding: '0 56px 40px' }}
       >
         <div
-          className="flex flex-col sm:flex-row items-start sm:items-center relative overflow-hidden cursor-pointer"
+          className="flex items-center relative overflow-hidden cursor-pointer"
           style={{
             gap: 24,
             padding: '22px 28px',
@@ -300,14 +303,15 @@ export default function Dashboard() {
         initial={{ opacity: 0, y: 14 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2, duration: 0.45 }}
-        className="px-4 pb-10 sm:px-8 md:px-14 md:pb-14"
+        className="page-section"
+        style={{ padding: '0 56px 56px' }}
       >
         <div className="flex items-baseline justify-between" style={{ marginBottom: 20 }}>
-          <h2 className="font-display text-[24px] font-normal text-white">Subject Areas</h2>
+          <h2 className="section-heading font-display text-[24px] font-normal text-white">Subject Areas</h2>
           <span className="text-[11px] font-medium text-text-muted">{numbered.length} areas</span>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-1.5">
+        <div className="subject-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6 }}>
           {numbered.map(folder => {
             const rawNum = folder.name.match(/^[\d.]+/)?.[0] || '';
             const num = zeroPad(rawNum);
@@ -361,13 +365,14 @@ export default function Dashboard() {
         initial={{ opacity: 0, y: 14 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.25, duration: 0.45 }}
-        className="px-4 pb-14 sm:px-8 md:px-14 md:pb-20"
+        className="page-section"
+        style={{ padding: '0 56px 80px' }}
       >
         <div style={{ marginBottom: 20 }}>
-          <h2 className="font-display text-[24px] font-normal text-white">Special Collections</h2>
+          <h2 className="section-heading font-display text-[24px] font-normal text-white">Special Collections</h2>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-8">
+        <div className="collections-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0 32px' }}>
           {special.map((f) => (
             <div
               key={f.id}

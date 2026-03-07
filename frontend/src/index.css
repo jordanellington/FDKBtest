@@ -197,6 +197,16 @@ body {
   box-shadow: 0 2px 12px rgba(0,0,0,0.4);
 }
 
+/* DocumentViewer responsive panel */
+@media (min-width: 768px) {
+  .document-viewer-panel {
+    width: 728px;
+    max-width: 50%;
+    min-width: 340px;
+    flex: 0 1 auto;
+  }
+}
+
 /* Exact chip enter animation */
 @keyframes chipIn {
   from { opacity: 0; transform: scale(0.9); }

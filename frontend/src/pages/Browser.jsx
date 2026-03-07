@@ -38,6 +38,11 @@ const BADGE_CONFIG = {
   red:   { color: '#e8836e', bg: 'rgba(232,131,110,0.07)' },
 };
 
+function zeroPad(numStr) {
+  const n = parseInt(numStr, 10);
+  return isNaN(n) ? numStr : String(n).padStart(2, '0');
+}
+
 export default function Browser() {
   const { nodeId } = useParams();
   const navigate = useNavigate();
@@ -46,8 +51,6 @@ export default function Browser() {
   const [loading, setLoading] = useState(true);
   const [selectedDoc, setSelectedDoc] = useState(null);
   const [pagination, setPagination] = useState(null);
-  const [hoveredArea, setHoveredArea] = useState(null);
-  const [hoveredCol, setHoveredCol] = useState(null);
   const currentId = nodeId || 'root';
   const isRoot = currentId === 'root';
 
@@ -150,31 +153,47 @@ export default function Browser() {
                   </div>
                   <div className="subject-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6 }}>
                     {numbered.map(folder => {
-                      const num = folder.name.match(/^[\d.]+/)?.[0] || '';
+                      const rawNum = folder.name.match(/^[\d.]+/)?.[0] || '';
+                      const num = zeroPad(rawNum);
                       const title = folder.name.replace(/^[\d.]+ /, '');
-                      const h = hoveredArea === folder.id;
                       return (
                         <div
                           key={folder.id}
-                          onMouseEnter={() => setHoveredArea(folder.id)}
-                          onMouseLeave={() => setHoveredArea(null)}
                           onClick={() => handleNavigate(folder.id)}
-                          className="flex items-center gap-3 px-4 py-3.5 rounded-lg cursor-pointer transition-all duration-200"
+                          className="subject-card flex items-center cursor-pointer transition-all duration-200"
                           style={{
-                            background: h ? 'var(--color-bg-hover)' : 'var(--color-bg-secondary)',
-                            boxShadow: h ? 'var(--shadow-md)' : 'var(--shadow-card)',
-                            border: `1px solid ${h ? 'rgba(255,255,255,0.11)' : 'rgba(255,255,255,0.04)'}`,
-                            transform: h ? 'translateY(-1px)' : 'none',
+                            gap: 12,
+                            padding: '14px 16px',
+                            borderRadius: 8,
+                            background: '#151c19',
+                            boxShadow: '0 1px 3px rgba(0,0,0,0.3), 0 1px 2px rgba(0,0,0,0.2)',
+                            border: '1px solid rgba(255,255,255,0.04)',
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.background = '#222e2a';
+                            e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,0,0,0.35), 0 2px 4px rgba(0,0,0,0.2)';
+                            e.currentTarget.style.borderColor = 'rgba(255,255,255,0.11)';
+                            e.currentTarget.style.transform = 'translateY(-1px)';
+                            e.currentTarget.querySelector('.card-id').style.color = '#4db8a4';
+                            e.currentTarget.querySelector('.card-name').style.color = '#fff';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.background = '#151c19';
+                            e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.3), 0 1px 2px rgba(0,0,0,0.2)';
+                            e.currentTarget.style.borderColor = 'rgba(255,255,255,0.04)';
+                            e.currentTarget.style.transform = 'none';
+                            e.currentTarget.querySelector('.card-id').style.color = '#5f706a';
+                            e.currentTarget.querySelector('.card-name').style.color = '#e6eae8';
                           }}
                         >
-                          <span
-                            className="text-[11px] font-bold min-w-[22px] tracking-[0.02em] transition-colors duration-200"
-                            style={{ color: h ? 'var(--color-accent)' : 'var(--color-text-muted)' }}
-                          >{num}</span>
-                          <span
-                            className="text-[13px] font-medium leading-snug transition-colors duration-150"
-                            style={{ color: h ? '#fff' : 'var(--color-text-primary)' }}
-                          >{title}</span>
+                          <span className="card-id text-[11px] font-bold tracking-[0.02em] transition-colors duration-200"
+                            style={{ color: '#5f706a', minWidth: 22 }}>
+                            {num}
+                          </span>
+                          <span className="card-name text-[13px] font-medium leading-snug transition-colors duration-150"
+                            style={{ color: '#e6eae8' }}>
+                            {title}
+                          </span>
                         </div>
                       );
                     })}
@@ -193,23 +212,18 @@ export default function Browser() {
                 >
                   <h2 className="section-heading font-display text-[24px] font-normal text-white" style={{ marginBottom: 20 }}>Special Collections</h2>
                   <div className="collections-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0 32px' }}>
-                    {special.map((f, i) => {
-                      const h = hoveredCol === i;
-                      return (
-                        <div
-                          key={f.id}
-                          onMouseEnter={() => setHoveredCol(i)}
-                          onMouseLeave={() => setHoveredCol(null)}
-                          onClick={() => handleNavigate(f.id)}
-                          className="py-2.5 border-b border-border cursor-pointer"
-                        >
-                          <span
-                            className="text-[13px] transition-colors duration-150"
-                            style={{ color: h ? 'var(--color-accent-bright)' : 'var(--color-text-secondary)' }}
-                          >{f.name}</span>
-                        </div>
-                      );
-                    })}
+                    {special.map((f) => (
+                      <div
+                        key={f.id}
+                        onClick={() => handleNavigate(f.id)}
+                        className="cursor-pointer"
+                        style={{ padding: '10px 0', borderBottom: '1px solid rgba(255,255,255,0.04)' }}
+                      >
+                        <span className="text-[13px] text-text-secondary hover:text-accent-bright transition-colors duration-150">
+                          {f.name}
+                        </span>
+                      </div>
+                    ))}
                   </div>
                 </motion.div>
               )}
@@ -223,7 +237,7 @@ export default function Browser() {
                   <p className="text-[10px] text-text-muted uppercase tracking-wider font-semibold" style={{ marginBottom: 20 }}>
                     Folders ({folders.length})
                   </p>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-1.5">
+                  <div className="subject-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6 }}>
                     {folders.map((folder, i) => (
                       <motion.div
                         key={folder.id}
@@ -231,14 +245,32 @@ export default function Browser() {
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: i * 0.015 }}
                         onClick={() => handleNavigate(folder.id)}
-                        className="bg-bg-secondary rounded-lg px-4 py-3.5 cursor-pointer hover:bg-bg-elevated transition-all group flex items-center gap-3"
-                        style={{ boxShadow: 'var(--shadow-card)', border: '1px solid rgba(255,255,255,0.04)' }}
+                        className="subject-card flex items-center cursor-pointer transition-all duration-200"
+                        style={{
+                          gap: 10,
+                          padding: '14px 16px',
+                          borderRadius: 8,
+                          background: '#151c19',
+                          boxShadow: '0 1px 3px rgba(0,0,0,0.3), 0 1px 2px rgba(0,0,0,0.2)',
+                          border: '1px solid rgba(255,255,255,0.04)',
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.background = '#222e2a';
+                          e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,0,0,0.35), 0 2px 4px rgba(0,0,0,0.2)';
+                          e.currentTarget.style.borderColor = 'rgba(255,255,255,0.11)';
+                          e.currentTarget.style.transform = 'translateY(-1px)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.background = '#151c19';
+                          e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.3), 0 1px 2px rgba(0,0,0,0.2)';
+                          e.currentTarget.style.borderColor = 'rgba(255,255,255,0.04)';
+                          e.currentTarget.style.transform = 'none';
+                        }}
                       >
-                        <Folder size={15} className="text-accent/50 group-hover:text-accent transition-colors shrink-0" strokeWidth={1.5} />
-                        <span className="text-[13px] text-text-secondary group-hover:text-text-primary transition-colors truncate">
+                        <Folder size={14} className="text-accent/50 shrink-0" strokeWidth={1.5} />
+                        <span className="text-[13px] font-medium leading-snug text-text-primary truncate">
                           {folder.name}
                         </span>
-                        <ChevronRight size={12} className="text-text-muted/0 group-hover:text-text-muted/60 transition-all ml-auto shrink-0" />
                       </motion.div>
                     ))}
                   </div>

@@ -20,15 +20,23 @@ const sessions = new Map();
 // Authenticates through CAS SSO and returns a JSESSIONID for Alfresco Share
 async function casLogin(username, password) {
   const CAS_LOGIN = `${ALFRESCO_BASE.replace('secure.', 'secure-login.')}/cas/login`;
-  const SERVICE_URL = `${ALFRESCO_BASE}/share/page`;
+  const SERVICE_URL = `${ALFRESCO_BASE}/share/page/`;
+  const casUrl = `${CAS_LOGIN}?service=${encodeURIComponent(SERVICE_URL)}`;
 
-  // Step 1: GET the CAS login page to get the form tokens
-  const loginPageResp = await fetch(`${CAS_LOGIN}?service=${encodeURIComponent(SERVICE_URL)}`, {
-    redirect: 'manual',
-  });
+  const browserHeaders = {
+    'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+    'Accept-Language': 'en-US,en;q=0.9',
+  };
+
+  // Step 1: GET the CAS login page — follow redirects to land on the final page
+  const loginPageResp = await fetch(casUrl, { headers: browserHeaders });
   const loginPageHtml = await loginPageResp.text();
-  const casPageCookies = (loginPageResp.headers.raw()['set-cookie'] || [])
-    .map(c => c.split(';')[0]).join('; ');
+
+  // Collect all cookies from the response
+  const setCookies = loginPageResp.headers.raw()['set-cookie'] || [];
+  const cookieStr = setCookies.map(c => c.split(';')[0]).join('; ');
+  console.log('[auth] CAS GET status:', loginPageResp.status, '| cookies:', setCookies.length, '| url:', loginPageResp.url);
 
   // Extract hidden form fields
   const executionMatch = loginPageHtml.match(/name="execution"\s+value="([^"]+)"/);
@@ -36,33 +44,29 @@ async function casLogin(username, password) {
   const execution = executionMatch[1];
 
   // Step 2: POST credentials to CAS
-  const formBody = new URLSearchParams({
-    username,
-    password,
-    execution,
-    _eventId: 'submit',
-    geolocation: '',
-  });
+  const formBody = `username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}&execution=${encodeURIComponent(execution)}&_eventId=submit&geolocation=`;
 
-  const casPostResp = await fetch(`${CAS_LOGIN}?service=${encodeURIComponent(SERVICE_URL)}`, {
+  const casPostResp = await fetch(casUrl, {
     method: 'POST',
     headers: {
+      ...browserHeaders,
       'Content-Type': 'application/x-www-form-urlencoded',
-      'Cookie': casPageCookies,
+      'Cookie': cookieStr,
+      'Origin': 'https://secure-login.covi3.com',
+      'Referer': casUrl,
     },
-    body: formBody.toString(),
+    body: formBody,
     redirect: 'manual',
   });
 
-  // CAS should redirect back to Share with a ticket param
   const casRedirectUrl = casPostResp.headers.get('location');
-  console.log('[auth] CAS POST status:', casPostResp.status, '| redirect:', casRedirectUrl?.substring(0, 120));
+  console.log('[auth] CAS POST status:', casPostResp.status, '| redirect:', casRedirectUrl?.substring(0, 150));
+
   if (!casRedirectUrl || !casRedirectUrl.includes('ticket=')) {
     const body = await casPostResp.text();
-    // Log a snippet to diagnose
-    const snippet = body.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').substring(0, 300);
+    const snippet = body.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').substring(0, 400);
     console.log('[auth] CAS response snippet:', snippet);
-    if (body.includes('credentials') || body.includes('nvalid') || body.includes('error') || body.includes('denied')) {
+    if (body.includes('credentials') || body.includes('nvalid') || body.includes('denied')) {
       throw new Error('INVALID_CREDENTIALS');
     }
     throw new Error('CAS did not redirect with ticket');

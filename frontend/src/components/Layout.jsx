@@ -29,8 +29,8 @@ export default function Layout() {
           <p className="text-[10px] font-bold tracking-[0.32em] uppercase text-text-muted mb-1">
             Covington
           </p>
-          <h1 className="font-display text-[36px] font-normal text-text-primary leading-none">FDKB</h1>
-          <p className="text-[10px] font-medium text-text-dim mt-1.5 tracking-[0.08em]">Navigator</p>
+          <h1 className="font-display text-[36px] font-normal text-text-primary leading-none">FDKB v2.0</h1>
+          <p className="text-[10px] font-medium text-text-dim mt-1.5 tracking-[0.08em]">beta</p>
         </div>
 
         <div className="h-px bg-border mx-5 mb-4" />

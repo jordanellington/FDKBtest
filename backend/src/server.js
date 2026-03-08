@@ -170,6 +170,20 @@ app.post('/api/auth/dev-login', async (req, res) => {
   }
 });
 
+app.get('/api/auth/heartbeat', requireAuth, async (req, res) => {
+  try {
+    const resp = await alfrescoGet(
+      `${ALFRESCO_API}/alfresco/versions/1/nodes/${FDKB_DOCLIB_ID}`,
+      req.session
+    );
+    if (resp.status === 401) return res.status(401).json({ error: 'Session expired' });
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('[heartbeat] error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.post('/api/auth/logout', (req, res) => {
   const sessionId = req.headers['x-session-id'];
   sessions.delete(sessionId);
@@ -211,7 +225,17 @@ async function alfrescoFetch(url, session, options = {}) {
       ...options.headers,
       'Cookie': `JSESSIONID=${jsessionId}`
     };
-    return fetch(shareUrl, { ...options, headers });
+    const resp = await fetch(shareUrl, { ...options, headers });
+    const respContentType = resp.headers.get('content-type') || '';
+    if (respContentType.includes('text/html')) {
+      // Alfresco session expired — Share returned login page instead of JSON
+      console.error('[auth] JSESSIONID expired — got HTML instead of JSON');
+      return new Response(JSON.stringify({ error: 'Session expired' }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+    return resp;
   }
 
   if (basicAuth) {
@@ -248,6 +272,7 @@ app.get('/api/site', requireAuth, async (req, res) => {
       `${ALFRESCO_API}/alfresco/versions/1/sites/${FDKB_SITE_ID}`,
       req.session
     );
+    if (resp.status === 401) return res.status(401).json({ error: 'Session expired' });
     const data = await resp.json();
     res.json(data.entry);
   } catch (err) {
@@ -269,6 +294,7 @@ app.get('/api/nodes/:nodeId/children', requireAuth, async (req, res) => {
 
   try {
     const resp = await alfrescoGet(url, req.session);
+    if (resp.status === 401) return res.status(401).json({ error: 'Session expired' });
     const data = await resp.json();
     if (!resp.ok) {
       console.error('Children API error:', resp.status, JSON.stringify(data));
@@ -287,6 +313,7 @@ app.get('/api/nodes/:nodeId', requireAuth, async (req, res) => {
       `${ALFRESCO_API}/alfresco/versions/1/nodes/${nodeId}?include=properties,aspectNames,path`,
       req.session
     );
+    if (resp.status === 401) return res.status(401).json({ error: 'Session expired' });
     const data = await resp.json();
     res.json(data.entry);
   } catch (err) {
@@ -323,6 +350,7 @@ app.post('/api/search', requireAuth, async (req, res) => {
         ...(SORT_MAP[sort] ? { sort: SORT_MAP[sort] } : {}),
       }
     );
+    if (resp.status === 401) return res.status(401).json({ error: 'Session expired' });
     const data = await resp.json();
     res.json(data);
   } catch (err) {
@@ -340,6 +368,7 @@ app.get('/api/nodes/:nodeId/content', requireAuth, async (req, res) => {
       `${ALFRESCO_API}/alfresco/versions/1/nodes/${nodeId}/content`,
       req.session
     );
+    if (resp.status === 401) return res.status(401).json({ error: 'Session expired' });
     const contentType = resp.headers.get('content-type');
     res.set('Content-Type', contentType);
     // Use inline disposition so PDFs render in iframes instead of downloading
@@ -369,12 +398,14 @@ app.get('/api/stats', requireAuth, async (req, res) => {
         paging: { maxItems: 0 }
       }
     );
+    if (resp.status === 401) return res.status(401).json({ error: 'Session expired' });
     const data = await resp.json();
 
     const foldersResp = await alfrescoGet(
       `${ALFRESCO_API}/alfresco/versions/1/nodes/${FDKB_DOCLIB_ID}/children?maxItems=1&where=(isFolder=true)`,
       req.session
     );
+    if (foldersResp.status === 401) return res.status(401).json({ error: 'Session expired' });
     const foldersData = await foldersResp.json();
 
     res.json({

@@ -34,6 +34,31 @@ async function request(path, options = {}) {
   return resp;
 }
 
+// Session keep-alive heartbeat (10 minutes)
+let heartbeatInterval = null;
+
+function startHeartbeat() {
+  stopHeartbeat();
+  heartbeatInterval = setInterval(async () => {
+    if (!sessionId) return stopHeartbeat();
+    try {
+      await request('/api/auth/heartbeat');
+    } catch {
+      // 401 is handled inside request() — redirects to login
+    }
+  }, 10 * 60 * 1000);
+}
+
+function stopHeartbeat() {
+  if (heartbeatInterval) {
+    clearInterval(heartbeatInterval);
+    heartbeatInterval = null;
+  }
+}
+
+// Start heartbeat if we already have a session on load
+if (sessionId) startHeartbeat();
+
 export async function login(username, password) {
   const resp = await request('/api/auth/login', {
     method: 'POST',
@@ -42,6 +67,7 @@ export async function login(username, password) {
   if (!resp.ok) throw new Error('Invalid credentials');
   const data = await resp.json();
   setSession(data.sessionId);
+  startHeartbeat();
   return data;
 }
 
@@ -54,10 +80,12 @@ export async function devLoginApi(jsessionId) {
   if (!resp.ok) throw new Error('Invalid session');
   const data = await resp.json();
   setSession(data.sessionId);
+  startHeartbeat();
   return data;
 }
 
 export async function logout() {
+  stopHeartbeat();
   await request('/api/auth/logout', { method: 'POST' });
   setSession(null);
 }

@@ -311,7 +311,7 @@ export default function DocumentViewer({ document: doc, searchQuery, onClose }) 
         borderTop: '1px solid rgba(255,255,255,0.06)',
         boxShadow: '0 -1px 3px rgba(0,0,0,0.2)',
       }} className="shrink-0">
-        <div className="viewer-meta-bar flex items-center gap-5 text-[11px] text-text-secondary" style={{ padding: '10px 16px' }}>
+        <div className="viewer-meta-bar flex items-center gap-5 text-[11px] text-text-secondary" style={{ padding: '10px 12px 10px 16px' }}>
           <span className="flex items-center gap-1.5">
             <User size={10} className="text-text-muted" />
             {meta.author}
@@ -344,7 +344,7 @@ export default function DocumentViewer({ document: doc, searchQuery, onClose }) 
             <button
               onClick={() => setChatOpen(!chatOpen)}
               title={chatOpen ? 'Close AI chat' : 'Chat with document'}
-              className="ml-auto inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-semibold transition-all"
+              className="ml-auto shrink-0 inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-semibold transition-all"
               style={{
                 background: chatOpen ? 'rgba(200,164,78,0.15)' : 'rgba(255,255,255,0.04)',
                 color: chatOpen ? 'var(--color-accent-gold)' : 'var(--color-text-secondary)',

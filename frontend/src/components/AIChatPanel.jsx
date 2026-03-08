@@ -16,6 +16,7 @@ export default function AIChatPanel({ doc, onClose }) {
   const meta = doc ? extractMetadata(doc) : null;
 
   const docContext = doc ? {
+    id: doc.id,
     name: doc.name,
     author: meta?.author,
     modified: doc.modifiedAt,

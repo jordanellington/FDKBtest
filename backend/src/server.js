@@ -468,19 +468,59 @@ app.post('/api/chat', requireAuth, async (req, res) => {
   }
 
   const systemPrompt = doc
-    ? `You are a helpful legal document assistant for Covington & Burling's Food & Drug Knowledge Base (FDKB). You are analyzing the document "${doc.name}".\n\nDocument metadata:\n- Author: ${doc.author || 'Unknown'}\n- Modified: ${doc.modified || 'Unknown'}\n- Pages: ${doc.pages || 'Unknown'}\n- Path: ${doc.path || 'Unknown'}\n\nProvide concise, professional answers. If you don't have enough information from the document metadata to answer a question, say so clearly. When the user asks about document contents, note that you can see the metadata but not the full document text in this POC version.`
+    ? `You are a helpful legal document assistant for Covington & Burling's Food & Drug Knowledge Base (FDKB). You are analyzing the document "${doc.name}".\n\nDocument metadata:\n- Author: ${doc.author || 'Unknown'}\n- Modified: ${doc.modified || 'Unknown'}\n- Pages: ${doc.pages || 'Unknown'}\n- Path: ${doc.path || 'Unknown'}\n\nThe full document has been provided. Provide concise, professional answers based on the document content. Reference specific sections, page numbers, or regulatory citations when relevant.`
     : 'You are a helpful legal document assistant for the FDKB (Food & Drug Knowledge Base).';
 
   try {
+    // Fetch PDF content if document ID is provided
+    let pdfBase64 = null;
+    if (doc?.id) {
+      try {
+        const pdfResp = await alfrescoFetch(
+          `${ALFRESCO_API}/alfresco/versions/1/nodes/${doc.id}/content`,
+          req.session
+        );
+        if (pdfResp.ok) {
+          const buffer = await pdfResp.arrayBuffer();
+          // Skip if PDF is over 20MB (base64 would exceed Bedrock limits)
+          if (buffer.byteLength <= 20 * 1024 * 1024) {
+            pdfBase64 = Buffer.from(buffer).toString('base64');
+            console.log(`[chat] Fetched PDF for ${doc.name}: ${(buffer.byteLength / 1024 / 1024).toFixed(1)}MB`);
+          } else {
+            console.log(`[chat] PDF too large (${(buffer.byteLength / 1024 / 1024).toFixed(1)}MB), sending metadata only`);
+          }
+        }
+      } catch (err) {
+        console.error('[chat] Failed to fetch PDF:', err.message);
+      }
+    }
+
+    // Build messages: inject PDF as document block in the first user message
+    const bedrockMessages = messages.map((m, i) => {
+      if (i === 0 && m.role === 'user' && pdfBase64) {
+        return {
+          role: 'user',
+          content: [
+            {
+              type: 'document',
+              source: { type: 'base64', media_type: 'application/pdf', data: pdfBase64 },
+            },
+            { type: 'text', text: m.content },
+          ],
+        };
+      }
+      return { role: m.role, content: m.content };
+    });
+
     const command = new InvokeModelWithResponseStreamCommand({
       modelId: BEDROCK_MODEL_ID,
       contentType: 'application/json',
       accept: 'application/json',
       body: JSON.stringify({
         anthropic_version: 'bedrock-2023-05-31',
-        max_tokens: 1024,
+        max_tokens: 4096,
         system: systemPrompt,
-        messages: messages.map(m => ({ role: m.role, content: m.content })),
+        messages: bedrockMessages,
       }),
     });
 

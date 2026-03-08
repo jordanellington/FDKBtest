@@ -5,7 +5,7 @@ import { execFile } from 'child_process';
 import { fileURLToPath } from 'url';
 import path from 'path';
 import { BedrockRuntimeClient, InvokeModelWithResponseStreamCommand } from '@aws-sdk/client-bedrock-runtime';
-import { getOrBuildCache, retrieveChunks } from './rag.js';
+import { getOrBuildCache, retrieveChunks, isCached } from './rag.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -474,9 +474,11 @@ app.post('/api/chat', requireAuth, async (req, res) => {
   }
 
   let extractedText = null;
+  const pageCount = parseInt(doc?.pages, 10) || 0;
+  const cachedAlready = doc?.id && isCached(doc.id, doc.modified || '');
 
-  // Fetch PDF and extract text via PyMuPDF
-  if (doc?.id) {
+  // Skip PDF fetch if RAG cache already has this document
+  if (doc?.id && !cachedAlready) {
     try {
       const pdfResp = await alfrescoFetch(
         `${ALFRESCO_API}/alfresco/versions/1/nodes/${doc.id}/content`,
@@ -503,8 +505,7 @@ app.post('/api/chat', requireAuth, async (req, res) => {
   }
 
   // Determine if we need RAG (large doc) or can send full text (small doc)
-  const pageCount = parseInt(doc?.pages, 10) || 0;
-  const useRag = extractedText && (extractedText.length > 120_000 || pageCount > 40);
+  const useRag = cachedAlready || (extractedText && (extractedText.length > 120_000 || pageCount > 40));
   let retrievedChunks = null;
 
   if (useRag) {

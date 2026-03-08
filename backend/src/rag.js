@@ -8,7 +8,7 @@ const CONCURRENCY = 10;
 const DEFAULT_K = 5;
 const BROAD_K = 10;
 const CITATION_BOOST = 0.15;
-const SIMILARITY_THRESHOLD = 0.3;
+const SIMILARITY_THRESHOLD = 0.05;
 
 // In-memory cache: key = "nodeId:modifiedAt"
 const embedCache = new Map();
@@ -132,6 +132,13 @@ function dotProduct(a, b) {
     sum += a[i] * b[i];
   }
   return sum;
+}
+
+/**
+ * Check if a document is already cached (avoids re-fetching PDF).
+ */
+export function isCached(docId, modifiedAt) {
+  return embedCache.has(`${docId}:${modifiedAt}`);
 }
 
 /**

@@ -294,7 +294,7 @@ export default function DocumentViewer({ document: doc, searchQuery, onClose }) 
         {chatOpen && (
           <div
             style={{
-              flex: '0 0 260px',
+              flex: '1 1 0%',
               borderTop: '1px solid rgba(255,255,255,0.07)',
               minHeight: 0,
             }}

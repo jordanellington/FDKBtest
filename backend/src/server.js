@@ -1,7 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import fetch from 'node-fetch';
-import Anthropic from '@anthropic-ai/sdk';
+import { BedrockRuntimeClient, InvokeModelWithResponseStreamCommand } from '@aws-sdk/client-bedrock-runtime';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -438,11 +438,19 @@ app.get('/api/stats', requireAuth, async (req, res) => {
   }
 });
 
-// --------------- AI Chat ---------------
+// --------------- AI Chat (AWS Bedrock) ---------------
 
-const anthropic = process.env.ANTHROPIC_API_KEY
-  ? new Anthropic()
+const bedrockClient = process.env.AWS_BEDROCK_ACCESS_KEY_ID
+  ? new BedrockRuntimeClient({
+      region: process.env.AWS_BEDROCK_REGION || 'us-east-1',
+      credentials: {
+        accessKeyId: process.env.AWS_BEDROCK_ACCESS_KEY_ID,
+        secretAccessKey: process.env.AWS_BEDROCK_SECRET_ACCESS_KEY,
+      },
+    })
   : null;
+
+const BEDROCK_MODEL_ID = process.env.AWS_BEDROCK_MODEL_ID || 'us.anthropic.claude-haiku-4-5-20251001-v1:0';
 
 app.post('/api/chat', requireAuth, async (req, res) => {
   const { messages, document: doc } = req.body;
@@ -454,55 +462,46 @@ app.post('/api/chat', requireAuth, async (req, res) => {
   res.setHeader('Cache-Control', 'no-cache');
   res.setHeader('Connection', 'keep-alive');
 
-  // If real API key is configured, use Claude
-  if (anthropic) {
-    const systemPrompt = doc
-      ? `You are a helpful legal document assistant for Covington & Burling's Food & Drug Knowledge Base (FDKB). You are analyzing the document "${doc.name}".\n\nDocument metadata:\n- Author: ${doc.author || 'Unknown'}\n- Modified: ${doc.modified || 'Unknown'}\n- Pages: ${doc.pages || 'Unknown'}\n- Path: ${doc.path || 'Unknown'}\n\nProvide concise, professional answers. If you don't have enough information from the document metadata to answer a question, say so clearly. When the user asks about document contents, note that you can see the metadata but not the full document text in this POC version.`
-      : 'You are a helpful legal document assistant for the FDKB (Food & Drug Knowledge Base).';
+  if (!bedrockClient) {
+    res.write(`data: ${JSON.stringify({ type: 'error', message: 'AI not configured — AWS Bedrock credentials missing' })}\n\n`);
+    return res.end();
+  }
 
-    try {
-      const stream = await anthropic.messages.stream({
-        model: 'claude-haiku-4-5',
+  const systemPrompt = doc
+    ? `You are a helpful legal document assistant for Covington & Burling's Food & Drug Knowledge Base (FDKB). You are analyzing the document "${doc.name}".\n\nDocument metadata:\n- Author: ${doc.author || 'Unknown'}\n- Modified: ${doc.modified || 'Unknown'}\n- Pages: ${doc.pages || 'Unknown'}\n- Path: ${doc.path || 'Unknown'}\n\nProvide concise, professional answers. If you don't have enough information from the document metadata to answer a question, say so clearly. When the user asks about document contents, note that you can see the metadata but not the full document text in this POC version.`
+    : 'You are a helpful legal document assistant for the FDKB (Food & Drug Knowledge Base).';
+
+  try {
+    const command = new InvokeModelWithResponseStreamCommand({
+      modelId: BEDROCK_MODEL_ID,
+      contentType: 'application/json',
+      accept: 'application/json',
+      body: JSON.stringify({
+        anthropic_version: 'bedrock-2023-05-31',
         max_tokens: 1024,
         system: systemPrompt,
         messages: messages.map(m => ({ role: m.role, content: m.content })),
-      });
-      for await (const event of stream) {
-        if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
-          res.write(`data: ${JSON.stringify({ type: 'delta', text: event.delta.text })}\n\n`);
+      }),
+    });
+
+    const response = await bedrockClient.send(command);
+
+    for await (const event of response.body) {
+      if (event.chunk) {
+        const parsed = JSON.parse(new TextDecoder().decode(event.chunk.bytes));
+        if (parsed.type === 'content_block_delta' && parsed.delta?.type === 'text_delta') {
+          res.write(`data: ${JSON.stringify({ type: 'delta', text: parsed.delta.text })}\n\n`);
         }
       }
-      res.write(`data: ${JSON.stringify({ type: 'done' })}\n\n`);
-      return res.end();
-    } catch (err) {
-      console.error('Chat error:', err);
-      res.write(`data: ${JSON.stringify({ type: 'error', message: err.message })}\n\n`);
-      return res.end();
     }
-  }
 
-  // Mock mode — simulate a streamed response
-  const lastMsg = messages[messages.length - 1]?.content?.toLowerCase() || '';
-  let mockReply;
-  if (doc && (lastMsg.includes('summar') || lastMsg.includes('about'))) {
-    mockReply = `This is "${doc.name}", a ${doc.pages || 'multi'}-page document authored by ${doc.author || 'the editorial team'}. It was last modified on ${doc.modified ? new Date(doc.modified).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : 'an unspecified date'}.\n\nBased on the metadata, this document is located in the ${doc.path || 'FDKB'} collection. In a production version, I would analyze the full text to provide a detailed summary of its contents, key regulatory citations, and actionable findings.\n\n*Note: This is a demo response. Connect an Anthropic API key for real AI analysis.*`;
-  } else if (lastMsg.includes('regulat') || lastMsg.includes('citat') || lastMsg.includes('cfr')) {
-    mockReply = `In a production implementation, I would scan the full document text and extract all regulatory citations including CFR references, Federal Register notices, and agency guidance documents.\n\nFor this POC, I can see from the metadata that this document is part of the FDKB collection, which typically contains FDA regulatory materials.\n\n*Note: This is a demo response. Connect an Anthropic API key for real AI analysis.*`;
-  } else if (lastMsg.includes('key finding') || lastMsg.includes('important')) {
-    mockReply = `Based on the document metadata, here are the key observations:\n\n1. **Document type**: This appears to be a regulatory document in the FDKB collection\n2. **Author**: ${doc?.author || 'Administrator'}\n3. **Scope**: ${doc?.pages || 'Multiple'} pages of regulatory content\n\nA full-text analysis would identify specific findings, compliance requirements, and action items.\n\n*Note: This is a demo response. Connect an Anthropic API key for real AI analysis.*`;
-  } else {
-    mockReply = `Thank you for your question about "${doc?.name || 'this document'}". In a production deployment, I would analyze the full document text to provide a detailed, accurate response.\n\nCurrently I can see the document metadata (author, date, page count, path) but not the full text content. The FDKB integration will support full-text analysis in a future release.\n\n*Note: This is a demo response. Connect an Anthropic API key for real AI analysis.*`;
+    res.write(`data: ${JSON.stringify({ type: 'done' })}\n\n`);
+    res.end();
+  } catch (err) {
+    console.error('[chat] Bedrock error:', err);
+    res.write(`data: ${JSON.stringify({ type: 'error', message: err.message })}\n\n`);
+    res.end();
   }
-
-  // Stream the mock reply word by word
-  const words = mockReply.split(' ');
-  for (let i = 0; i < words.length; i++) {
-    const chunk = (i === 0 ? '' : ' ') + words[i];
-    res.write(`data: ${JSON.stringify({ type: 'delta', text: chunk })}\n\n`);
-    await new Promise(r => setTimeout(r, 30));
-  }
-  res.write(`data: ${JSON.stringify({ type: 'done' })}\n\n`);
-  res.end();
 });
 
 app.listen(PORT, '0.0.0.0', () => {

@@ -113,6 +113,23 @@ app.post('/api/auth/login', async (req, res) => {
       headers: { 'Cookie': `JSESSIONID=${jsessionId}` }
     });
     const profile = profileResp.ok ? await profileResp.json() : null;
+
+    // Warm up the Share CMIS API proxy — first request after login often returns HTML
+    const SHARE_API_PROXY = `${ALFRESCO_BASE}/share/proxy/alfresco-api`;
+    const warmupUrl = `${SHARE_API_PROXY}/-default-/public/alfresco/versions/1/nodes/${FDKB_DOCLIB_ID}`;
+    for (let i = 0; i < 3; i++) {
+      const warmup = await fetch(warmupUrl, {
+        headers: {
+          'Cookie': `JSESSIONID=${jsessionId}`,
+          'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Accept': 'application/json, text/plain, */*',
+        }
+      });
+      const ct = warmup.headers.get('content-type') || '';
+      console.log(`[auth] Warmup ${i + 1}: status=${warmup.status} content-type=${ct}`);
+      if (ct.includes('application/json')) break;
+      await new Promise(r => setTimeout(r, 500));
+    }
     const resolvedUsername = profile?.userName || username;
 
     const sessionId = Buffer.from(`${resolvedUsername}:${Date.now()}`).toString('base64');

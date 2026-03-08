@@ -1,4 +1,13 @@
 import { InvokeModelCommand } from '@aws-sdk/client-bedrock-runtime';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const CACHE_DIR = path.join(__dirname, '../../data/rag-cache');
+
+// Ensure cache directory exists
+fs.mkdirSync(CACHE_DIR, { recursive: true });
 
 const EMBED_MODEL = 'amazon.titan-embed-text-v2:0';
 const EMBED_DIMENSIONS = 512;
@@ -135,10 +144,71 @@ function dotProduct(a, b) {
 }
 
 /**
- * Check if a document is already cached (avoids re-fetching PDF).
+ * Get the disk cache file path for a document.
+ */
+function getCachePath(docId) {
+  return path.join(CACHE_DIR, `${docId.replace(/[^a-zA-Z0-9-]/g, '_')}.json`);
+}
+
+/**
+ * Save cache entry to disk.
+ */
+function saveToDisk(docId, modifiedAt, entry) {
+  try {
+    const data = {
+      modifiedAt,
+      cachedAt: entry.cachedAt,
+      chunks: entry.chunks,
+      embeddings: entry.embeddings.map(e => Array.from(e)),
+    };
+    fs.writeFileSync(getCachePath(docId), JSON.stringify(data));
+    console.log(`[rag] Saved cache to disk for ${docId}`);
+  } catch (err) {
+    console.error('[rag] Failed to save cache to disk:', err.message);
+  }
+}
+
+/**
+ * Load cache entry from disk if it exists and modifiedAt matches.
+ */
+function loadFromDisk(docId, modifiedAt) {
+  try {
+    const filePath = getCachePath(docId);
+    if (!fs.existsSync(filePath)) return null;
+
+    const data = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+    if (data.modifiedAt !== modifiedAt) {
+      console.log(`[rag] Disk cache stale for ${docId} (${data.modifiedAt} != ${modifiedAt})`);
+      return null;
+    }
+
+    const entry = {
+      chunks: data.chunks,
+      embeddings: data.embeddings.map(e => new Float32Array(e)),
+      cachedAt: data.cachedAt,
+    };
+    console.log(`[rag] Loaded cache from disk for ${docId} (${entry.chunks.length} chunks)`);
+    return entry;
+  } catch (err) {
+    console.error('[rag] Failed to load cache from disk:', err.message);
+    return null;
+  }
+}
+
+/**
+ * Check if a document is already cached (memory or disk).
  */
 export function isCached(docId, modifiedAt) {
-  return embedCache.has(`${docId}:${modifiedAt}`);
+  const cacheKey = `${docId}:${modifiedAt}`;
+  if (embedCache.has(cacheKey)) return true;
+
+  // Check disk
+  const diskEntry = loadFromDisk(docId, modifiedAt);
+  if (diskEntry) {
+    embedCache.set(cacheKey, diskEntry);
+    return true;
+  }
+  return false;
 }
 
 /**
@@ -159,8 +229,9 @@ export async function getOrBuildCache(docId, modifiedAt, text, bedrockClient) {
   const embeddings = await embedChunks(chunks, bedrockClient);
   console.log(`[rag] Embedded ${embeddings.length} chunks`);
 
-  const entry = { chunks, embeddings, text, cachedAt: Date.now() };
+  const entry = { chunks, embeddings, cachedAt: Date.now() };
   embedCache.set(cacheKey, entry);
+  saveToDisk(docId, modifiedAt, entry);
 
   // LRU eviction: keep max 50 entries
   if (embedCache.size > 50) {

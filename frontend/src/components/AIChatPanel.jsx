@@ -13,6 +13,13 @@ export default function AIChatPanel({ doc, onClose }) {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
   }, [messages]);
 
+  // Clear chat when switching documents
+  useEffect(() => {
+    setMessages([]);
+    setInput('');
+    setStreaming(false);
+  }, [doc?.id]);
+
   const meta = doc ? extractMetadata(doc) : null;
 
   const docContext = doc ? {

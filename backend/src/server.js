@@ -223,13 +223,15 @@ async function alfrescoFetch(url, session, options = {}) {
     );
     const headers = {
       ...options.headers,
-      'Cookie': `JSESSIONID=${jsessionId}`
+      'Cookie': `JSESSIONID=${jsessionId}`,
+      'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      'Accept': 'application/json, text/plain, */*',
     };
     const resp = await fetch(shareUrl, { ...options, headers });
     const respContentType = resp.headers.get('content-type') || '';
     if (respContentType.includes('text/html')) {
       // Alfresco session expired — Share returned login page instead of JSON
-      console.error('[auth] JSESSIONID expired — got HTML instead of JSON');
+      console.error('[auth] JSESSIONID expired — got HTML instead of JSON | url:', shareUrl);
       return new Response(JSON.stringify({ error: 'Session expired' }), {
         status: 401,
         headers: { 'Content-Type': 'application/json' }

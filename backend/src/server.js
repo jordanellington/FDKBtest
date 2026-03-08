@@ -1,7 +1,12 @@
 import express from 'express';
 import cors from 'cors';
 import fetch from 'node-fetch';
+import { execFile } from 'child_process';
+import { fileURLToPath } from 'url';
+import path from 'path';
 import { BedrockRuntimeClient, InvokeModelWithResponseStreamCommand } from '@aws-sdk/client-bedrock-runtime';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -467,46 +472,46 @@ app.post('/api/chat', requireAuth, async (req, res) => {
     return res.end();
   }
 
+  let extractedText = null;
+
+  // Fetch PDF and extract text via PyMuPDF
+  if (doc?.id) {
+    try {
+      const pdfResp = await alfrescoFetch(
+        `${ALFRESCO_API}/alfresco/versions/1/nodes/${doc.id}/content`,
+        req.session
+      );
+      if (pdfResp.ok) {
+        const buffer = Buffer.from(await pdfResp.arrayBuffer());
+        console.log(`[chat] Fetched PDF for ${doc.name}: ${(buffer.byteLength / 1024 / 1024).toFixed(1)}MB`);
+
+        extractedText = await new Promise((resolve, reject) => {
+          const scriptPath = path.join(__dirname, '../scripts/extract_text.py');
+          const proc = execFile('python3', [scriptPath], { maxBuffer: 50 * 1024 * 1024 }, (err, stdout) => {
+            if (err) return reject(err);
+            resolve(stdout);
+          });
+          proc.stdin.write(buffer);
+          proc.stdin.end();
+        });
+        console.log(`[chat] Extracted ${extractedText.length} chars of text from ${doc.name}`);
+      }
+    } catch (err) {
+      console.error('[chat] Failed to extract PDF text:', err.message);
+    }
+  }
+
   const systemPrompt = doc
-    ? `You are a helpful legal document assistant for Covington & Burling's Food & Drug Knowledge Base (FDKB). You are analyzing the document "${doc.name}".\n\nDocument metadata:\n- Author: ${doc.author || 'Unknown'}\n- Modified: ${doc.modified || 'Unknown'}\n- Pages: ${doc.pages || 'Unknown'}\n- Path: ${doc.path || 'Unknown'}\n\nThe full document has been provided. Provide concise, professional answers based on the document content. Reference specific sections, page numbers, or regulatory citations when relevant.`
+    ? `You are a helpful legal document assistant for Covington & Burling's Food & Drug Knowledge Base (FDKB). You are analyzing the document "${doc.name}".\n\nDocument metadata:\n- Author: ${doc.author || 'Unknown'}\n- Modified: ${doc.modified || 'Unknown'}\n- Pages: ${doc.pages || 'Unknown'}\n- Path: ${doc.path || 'Unknown'}\n\n${extractedText ? 'The full document text has been extracted and provided below. Provide concise, professional answers based on the document content. Reference specific sections, page numbers, or regulatory citations when relevant.' : 'The document content could not be extracted. Answer based on metadata only and let the user know.'}`
     : 'You are a helpful legal document assistant for the FDKB (Food & Drug Knowledge Base).';
 
   try {
-    // Fetch PDF content if document ID is provided
-    let pdfBase64 = null;
-    if (doc?.id) {
-      try {
-        const pdfResp = await alfrescoFetch(
-          `${ALFRESCO_API}/alfresco/versions/1/nodes/${doc.id}/content`,
-          req.session
-        );
-        if (pdfResp.ok) {
-          const buffer = await pdfResp.arrayBuffer();
-          // Skip if PDF is over 20MB (base64 would exceed Bedrock limits)
-          if (buffer.byteLength <= 20 * 1024 * 1024) {
-            pdfBase64 = Buffer.from(buffer).toString('base64');
-            console.log(`[chat] Fetched PDF for ${doc.name}: ${(buffer.byteLength / 1024 / 1024).toFixed(1)}MB`);
-          } else {
-            console.log(`[chat] PDF too large (${(buffer.byteLength / 1024 / 1024).toFixed(1)}MB), sending metadata only`);
-          }
-        }
-      } catch (err) {
-        console.error('[chat] Failed to fetch PDF:', err.message);
-      }
-    }
-
-    // Build messages: inject PDF as document block in the first user message
+    // Build messages: inject extracted text in the first user message
     const bedrockMessages = messages.map((m, i) => {
-      if (i === 0 && m.role === 'user' && pdfBase64) {
+      if (i === 0 && m.role === 'user' && extractedText) {
         return {
           role: 'user',
-          content: [
-            {
-              type: 'document',
-              source: { type: 'base64', media_type: 'application/pdf', data: pdfBase64 },
-            },
-            { type: 'text', text: m.content },
-          ],
+          content: `[Document content]\n${extractedText}\n\n[User question]\n${m.content}`,
         };
       }
       return { role: m.role, content: m.content };

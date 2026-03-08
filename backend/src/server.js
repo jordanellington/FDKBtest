@@ -72,30 +72,41 @@ async function casLogin(username, password) {
     throw new Error('CAS did not redirect with ticket');
   }
 
-  // Step 3: Follow redirect to Share (this sets the JSESSIONID)
+  // Step 3: Follow redirect to Share (this sets the JSESSIONID + other cookies)
   const shareResp = await fetch(casRedirectUrl, { redirect: 'manual' });
   const shareCookies = shareResp.headers.raw()['set-cookie'] || [];
-  let jsessionId = null;
-  for (const cookie of shareCookies) {
-    const match = cookie.match(/JSESSIONID=([^;]+)/);
-    if (match) { jsessionId = match[1]; break; }
-  }
+  let allCookies = shareCookies.map(c => c.split(';')[0]);
+  console.log('[auth] Share redirect cookies:', allCookies);
 
   // Sometimes Share does another redirect — follow it to finalize the session
-  if (!jsessionId && shareResp.headers.get('location')) {
+  if (shareResp.headers.get('location')) {
     const nextResp = await fetch(shareResp.headers.get('location'), {
       redirect: 'manual',
-      headers: { 'Cookie': shareCookies.map(c => c.split(';')[0]).join('; ') },
+      headers: { 'Cookie': allCookies.join('; ') },
     });
     const nextCookies = nextResp.headers.raw()['set-cookie'] || [];
-    for (const cookie of [...shareCookies, ...nextCookies]) {
-      const match = cookie.match(/JSESSIONID=([^;]+)/);
-      if (match) { jsessionId = match[1]; break; }
+    const nextParsed = nextCookies.map(c => c.split(';')[0]);
+    console.log('[auth] Share follow-up cookies:', nextParsed);
+    // Merge: newer cookies override older ones with same name
+    const cookieMap = new Map();
+    for (const c of [...allCookies, ...nextParsed]) {
+      const name = c.split('=')[0];
+      cookieMap.set(name, c);
     }
+    allCookies = [...cookieMap.values()];
   }
 
+  // Extract JSESSIONID for backward compat
+  let jsessionId = null;
+  for (const c of allCookies) {
+    const match = c.match(/JSESSIONID=([^;]+)/);
+    if (match) { jsessionId = match[1]; break; }
+  }
   if (!jsessionId) throw new Error('Failed to obtain JSESSIONID from Share');
-  return jsessionId;
+
+  const cookieString = allCookies.join('; ');
+  console.log('[auth] Full cookie string:', cookieString);
+  return { jsessionId, cookieString };
 }
 
 // --------------- Auth ---------------
@@ -105,18 +116,18 @@ app.post('/api/auth/login', async (req, res) => {
 
   try {
     // Authenticate through CAS SSO
-    const jsessionId = await casLogin(username, password);
+    const { jsessionId, cookieString } = await casLogin(username, password);
     console.log('[auth] CAS login succeeded for', username);
 
     // Validate session and get profile
     const profileResp = await fetch(`${SHARE_PROXY}/api/people/${encodeURIComponent(username)}`, {
-      headers: { 'Cookie': `JSESSIONID=${jsessionId}` }
+      headers: { 'Cookie': cookieString }
     });
     const profile = profileResp.ok ? await profileResp.json() : null;
     const resolvedUsername = profile?.userName || username;
 
     const sessionId = Buffer.from(`${resolvedUsername}:${Date.now()}`).toString('base64');
-    sessions.set(sessionId, { jsessionId, username: resolvedUsername });
+    sessions.set(sessionId, { jsessionId, cookieString, username: resolvedUsername });
 
     res.json({
       sessionId,
@@ -204,7 +215,7 @@ function requireAuth(req, res, next) {
 
 // Unified fetch helper: uses ticket, JSESSIONID cookie, or basic auth depending on session
 async function alfrescoFetch(url, session, options = {}) {
-  const { ticket, jsessionId, basicAuth } = session;
+  const { ticket, jsessionId, cookieString, basicAuth } = session;
 
   if (ticket) {
     // Use alf_ticket param
@@ -223,7 +234,7 @@ async function alfrescoFetch(url, session, options = {}) {
     );
     const headers = {
       ...options.headers,
-      'Cookie': `JSESSIONID=${jsessionId}`,
+      'Cookie': cookieString || `JSESSIONID=${jsessionId}`,
       'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
       'Accept': 'application/json, text/plain, */*',
     };

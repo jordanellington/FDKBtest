@@ -311,7 +311,7 @@ export default function DocumentViewer({ document: doc, searchQuery, onClose }) 
         borderTop: '1px solid rgba(255,255,255,0.06)',
         boxShadow: '0 -1px 3px rgba(0,0,0,0.2)',
       }} className="shrink-0">
-        <div className="viewer-meta-bar flex items-center gap-4 text-[11px] text-text-secondary" style={{ padding: '8px 16px' }}>
+        <div className="viewer-meta-bar flex items-center gap-5 text-[11px] text-text-secondary" style={{ padding: '10px 16px' }}>
           <span className="flex items-center gap-1.5">
             <User size={10} className="text-text-muted" />
             {meta.author}
@@ -325,48 +325,46 @@ export default function DocumentViewer({ document: doc, searchQuery, onClose }) 
             {pages} pg
           </span>
           <span className="text-text-muted">{size}</span>
-          <div className="ml-auto flex items-center gap-2">
-            <a
-              href={getContentUrl(doc.id, true)}
-              download={doc.name}
-              className="inline-flex items-center gap-1.5 px-3 py-1 bg-accent text-text-on-dark rounded-md text-[10px] font-semibold hover:bg-accent-hover transition-colors"
-            >
-              <Download size={11} />
-              Download
-            </a>
-            {isPdf && (
-              <button
-                onClick={() => setChatOpen(!chatOpen)}
-                title={chatOpen ? 'Close AI chat' : 'Chat with document'}
-                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-semibold transition-all"
-                style={{
-                  background: chatOpen ? 'rgba(200,164,78,0.15)' : 'rgba(255,255,255,0.04)',
-                  color: chatOpen ? 'var(--color-accent-gold)' : 'var(--color-text-secondary)',
-                  border: chatOpen ? '1px solid var(--color-border-gold)' : '1px solid rgba(255,255,255,0.07)',
-                }}
-              >
-                <Sparkles size={11} />
-                Ask AI
-                <span style={{
-                  background: 'rgba(200,164,78,0.2)',
-                  color: 'var(--color-accent-gold)',
-                  padding: '0 4px',
-                  borderRadius: 4,
-                  fontSize: 8,
-                  fontWeight: 700,
-                  letterSpacing: '0.05em',
-                }}>BETA</span>
-                {chatOpen ? <ChevronDown size={10} /> : <ChevronUp size={10} />}
-              </button>
-            )}
+          <a
+            href={getContentUrl(doc.id, true)}
+            download={doc.name}
+            className="inline-flex items-center gap-1.5 px-3 py-1 bg-accent text-text-on-dark rounded-md text-[10px] font-semibold hover:bg-accent-hover transition-colors"
+          >
+            <Download size={11} />
+            Download
+          </a>
+          <button
+            onClick={() => setDetailsOpen(!detailsOpen)}
+            className="p-1 rounded text-text-muted hover:text-text-primary hover:bg-bg-elevated transition-colors"
+            title={detailsOpen ? 'Hide details' : 'Show details'}
+          >
+            {detailsOpen ? <ChevronDown size={13} /> : <ChevronUp size={13} />}
+          </button>
+          {isPdf && (
             <button
-              onClick={() => setDetailsOpen(!detailsOpen)}
-              className="p-1 rounded text-text-muted hover:text-text-primary hover:bg-bg-elevated transition-colors"
-              title={detailsOpen ? 'Hide details' : 'Show details'}
+              onClick={() => setChatOpen(!chatOpen)}
+              title={chatOpen ? 'Close AI chat' : 'Chat with document'}
+              className="ml-auto inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-semibold transition-all"
+              style={{
+                background: chatOpen ? 'rgba(200,164,78,0.15)' : 'rgba(255,255,255,0.04)',
+                color: chatOpen ? 'var(--color-accent-gold)' : 'var(--color-text-secondary)',
+                border: chatOpen ? '1px solid var(--color-border-gold)' : '1px solid rgba(255,255,255,0.07)',
+              }}
             >
-              {detailsOpen ? <ChevronDown size={13} /> : <ChevronUp size={13} />}
+              <Sparkles size={11} />
+              Ask AI
+              <span style={{
+                background: 'rgba(200,164,78,0.2)',
+                color: 'var(--color-accent-gold)',
+                padding: '0 4px',
+                borderRadius: 4,
+                fontSize: 8,
+                fontWeight: 700,
+                letterSpacing: '0.05em',
+              }}>BETA</span>
+              {chatOpen ? <ChevronDown size={10} /> : <ChevronUp size={10} />}
             </button>
-          </div>
+          )}
         </div>
 
         {detailsOpen && (

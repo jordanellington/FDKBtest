@@ -353,15 +353,6 @@ export default function DocumentViewer({ document: doc, searchQuery, onClose }) 
             >
               <Sparkles size={11} />
               Ask AI
-              <span style={{
-                background: 'rgba(200,164,78,0.2)',
-                color: 'var(--color-accent-gold)',
-                padding: '0 4px',
-                borderRadius: 4,
-                fontSize: 8,
-                fontWeight: 700,
-                letterSpacing: '0.05em',
-              }}>BETA</span>
               {chatOpen ? <ChevronDown size={10} /> : <ChevronUp size={10} />}
             </button>
           )}

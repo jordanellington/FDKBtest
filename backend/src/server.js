@@ -187,7 +187,12 @@ app.get('/api/auth/heartbeat', requireAuth, async (req, res) => {
       `${ALFRESCO_API}/alfresco/versions/1/nodes/${FDKB_DOCLIB_ID}`,
       req.session
     );
-    if (resp.status === 401) return res.status(401).json({ error: 'Session expired' });
+    // Check if Alfresco returned HTML (expired session) instead of JSON
+    const ct = resp.headers.get('content-type') || '';
+    if (ct.includes('text/html')) {
+      console.error('[heartbeat] Session expired — got HTML instead of JSON');
+      return res.status(401).json({ error: 'Session expired' });
+    }
     res.json({ ok: true });
   } catch (err) {
     console.error('[heartbeat] error:', err.message);
@@ -234,29 +239,9 @@ async function alfrescoFetch(url, session, options = {}) {
     );
     const headers = {
       ...options.headers,
-      'Cookie': cookieString || `JSESSIONID=${jsessionId}`,
-      'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-      'Accept': 'application/json, text/plain, */*',
+      'Cookie': `JSESSIONID=${jsessionId}`,
     };
-    let resp = await fetch(shareUrl, { ...options, headers });
-    let respContentType = resp.headers.get('content-type') || '';
-    if (respContentType.includes('text/html')) {
-      // Share proxy sometimes returns HTML on first request — retry once
-      console.warn('[auth] Got HTML instead of JSON, retrying... | url:', shareUrl);
-      await new Promise(r => setTimeout(r, 500));
-      resp = await fetch(shareUrl, { ...options, headers });
-      respContentType = resp.headers.get('content-type') || '';
-      if (respContentType.includes('text/html')) {
-        // Still HTML after retry — session is truly expired
-        console.error('[auth] JSESSIONID expired — got HTML after retry | url:', shareUrl);
-        return new Response(JSON.stringify({ error: 'Session expired' }), {
-          status: 401,
-          headers: { 'Content-Type': 'application/json' }
-        });
-      }
-      console.log('[auth] Retry succeeded — got JSON');
-    }
-    return resp;
+    return fetch(shareUrl, { ...options, headers });
   }
 
   if (basicAuth) {
@@ -293,7 +278,7 @@ app.get('/api/site', requireAuth, async (req, res) => {
       `${ALFRESCO_API}/alfresco/versions/1/sites/${FDKB_SITE_ID}`,
       req.session
     );
-    if (resp.status === 401) return res.status(401).json({ error: 'Session expired' });
+
     const data = await resp.json();
     res.json(data.entry);
   } catch (err) {
@@ -315,7 +300,7 @@ app.get('/api/nodes/:nodeId/children', requireAuth, async (req, res) => {
 
   try {
     const resp = await alfrescoGet(url, req.session);
-    if (resp.status === 401) return res.status(401).json({ error: 'Session expired' });
+
     const data = await resp.json();
     if (!resp.ok) {
       console.error('Children API error:', resp.status, JSON.stringify(data));
@@ -334,7 +319,7 @@ app.get('/api/nodes/:nodeId', requireAuth, async (req, res) => {
       `${ALFRESCO_API}/alfresco/versions/1/nodes/${nodeId}?include=properties,aspectNames,path`,
       req.session
     );
-    if (resp.status === 401) return res.status(401).json({ error: 'Session expired' });
+
     const data = await resp.json();
     res.json(data.entry);
   } catch (err) {
@@ -371,7 +356,7 @@ app.post('/api/search', requireAuth, async (req, res) => {
         ...(SORT_MAP[sort] ? { sort: SORT_MAP[sort] } : {}),
       }
     );
-    if (resp.status === 401) return res.status(401).json({ error: 'Session expired' });
+
     const data = await resp.json();
     res.json(data);
   } catch (err) {
@@ -389,7 +374,7 @@ app.get('/api/nodes/:nodeId/content', requireAuth, async (req, res) => {
       `${ALFRESCO_API}/alfresco/versions/1/nodes/${nodeId}/content`,
       req.session
     );
-    if (resp.status === 401) return res.status(401).json({ error: 'Session expired' });
+
     const contentType = resp.headers.get('content-type');
     res.set('Content-Type', contentType);
     // Use inline disposition so PDFs render in iframes instead of downloading
@@ -419,7 +404,7 @@ app.get('/api/stats', requireAuth, async (req, res) => {
         paging: { maxItems: 0 }
       }
     );
-    if (resp.status === 401) return res.status(401).json({ error: 'Session expired' });
+
     const data = await resp.json();
 
     const foldersResp = await alfrescoGet(

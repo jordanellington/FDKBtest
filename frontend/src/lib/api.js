@@ -132,7 +132,7 @@ export function getPreviewUrl(nodeId) {
   return `${API_URL}/api/nodes/${nodeId}/preview?sid=${sessionId}`;
 }
 
-export async function chatStream(messages, doc, onDelta, onDone, onError) {
+export async function chatStream(messages, doc, onDelta, onDone, onError, onStatus) {
   const resp = await fetch(`${API_URL}/api/chat`, {
     method: 'POST',
     headers: {
@@ -167,6 +167,7 @@ export async function chatStream(messages, doc, onDelta, onDone, onError) {
           if (data.type === 'delta') onDelta(data.text);
           else if (data.type === 'done') onDone();
           else if (data.type === 'error') onError(data.message);
+          else if (data.type === 'status' && onStatus) onStatus(data.message);
         } catch {}
       }
     }

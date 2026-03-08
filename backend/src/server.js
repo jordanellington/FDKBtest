@@ -5,6 +5,7 @@ import { execFile } from 'child_process';
 import { fileURLToPath } from 'url';
 import path from 'path';
 import { BedrockRuntimeClient, InvokeModelWithResponseStreamCommand } from '@aws-sdk/client-bedrock-runtime';
+import { getOrBuildCache, retrieveChunks } from './rag.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -501,21 +502,71 @@ app.post('/api/chat', requireAuth, async (req, res) => {
     }
   }
 
-  const systemPrompt = doc
-    ? `You are a helpful legal document assistant for Covington & Burling's Food & Drug Knowledge Base (FDKB). You are analyzing the document "${doc.name}".\n\nDocument metadata:\n- Author: ${doc.author || 'Unknown'}\n- Modified: ${doc.modified || 'Unknown'}\n- Pages: ${doc.pages || 'Unknown'}\n- Path: ${doc.path || 'Unknown'}\n\n${extractedText ? 'The full document text has been extracted and provided below. Provide concise, professional answers based on the document content. Reference specific sections, page numbers, or regulatory citations when relevant.' : 'The document content could not be extracted. Answer based on metadata only and let the user know.'}`
-    : 'You are a helpful legal document assistant for the FDKB (Food & Drug Knowledge Base).';
+  // Determine if we need RAG (large doc) or can send full text (small doc)
+  const pageCount = parseInt(doc?.pages, 10) || 0;
+  const useRag = extractedText && (extractedText.length > 120_000 || pageCount > 40);
+  let retrievedChunks = null;
+
+  if (useRag) {
+    try {
+      res.write(`data: ${JSON.stringify({ type: 'status', message: 'Building document index...' })}\n\n`);
+      await getOrBuildCache(doc.id, doc.modified || '', extractedText, bedrockClient);
+
+      const latestQuestion = messages[messages.length - 1]?.content || '';
+      res.write(`data: ${JSON.stringify({ type: 'status', message: 'Searching document...' })}\n\n`);
+      retrievedChunks = await retrieveChunks(latestQuestion, doc.id, doc.modified || '', bedrockClient);
+      console.log(`[chat] RAG: retrieved ${retrievedChunks.length} chunks for question`);
+    } catch (err) {
+      console.error('[chat] RAG error, falling back to truncated text:', err.message);
+      // Fall back to truncated text if RAG fails
+      extractedText = extractedText.slice(0, 120_000) + '\n\n[Document truncated due to size]';
+    }
+  }
+
+  const metadataBlock = doc
+    ? `Document metadata:\n- Author: ${doc.author || 'Unknown'}\n- Modified: ${doc.modified || 'Unknown'}\n- Pages: ${doc.pages || 'Unknown'}\n- Path: ${doc.path || 'Unknown'}`
+    : '';
+
+  let systemPrompt;
+  if (!doc) {
+    systemPrompt = 'You are a helpful legal document assistant for the FDKB (Food & Drug Knowledge Base).';
+  } else if (retrievedChunks) {
+    systemPrompt = `You are a helpful legal document assistant for Covington & Burling's Food & Drug Knowledge Base (FDKB). You are analyzing the document "${doc.name}".\n\n${metadataBlock}\n\nRelevant sections from the document have been retrieved and provided with each question. Base your answers on these sections. Reference page numbers and section headers when available. If the retrieved sections reference other sections not included, note this and tell the user which section to look up. Do not fabricate content not present in the provided sections.`;
+  } else if (extractedText) {
+    systemPrompt = `You are a helpful legal document assistant for Covington & Burling's Food & Drug Knowledge Base (FDKB). You are analyzing the document "${doc.name}".\n\n${metadataBlock}\n\nThe full document text has been extracted and provided. Provide concise, professional answers based on the document content. Reference specific sections, page numbers, or regulatory citations when relevant.`;
+  } else {
+    systemPrompt = `You are a helpful legal document assistant for Covington & Burling's Food & Drug Knowledge Base (FDKB). You are analyzing the document "${doc.name}".\n\n${metadataBlock}\n\nThe document content could not be extracted. Answer based on metadata only and let the user know.`;
+  }
 
   try {
-    // Build messages: inject extracted text in the first user message
-    const bedrockMessages = messages.map((m, i) => {
-      if (i === 0 && m.role === 'user' && extractedText) {
-        return {
+    // Build messages
+    let bedrockMessages;
+    if (retrievedChunks) {
+      // RAG path: inject chunks into the latest user message only
+      const latestMsg = messages[messages.length - 1];
+      const chunkText = retrievedChunks.map((c, i) =>
+        `[Section ${i + 1}${c.sectionHeader ? ': ' + c.sectionHeader : ''} (Page ${c.page})]\n${c.text}`
+      ).join('\n\n---\n\n');
+
+      bedrockMessages = [
+        ...messages.slice(0, -1).map(m => ({ role: m.role, content: m.content })),
+        {
           role: 'user',
-          content: `[Document content]\n${extractedText}\n\n[User question]\n${m.content}`,
-        };
-      }
-      return { role: m.role, content: m.content };
-    });
+          content: `[Retrieved document sections]\n\n${chunkText}\n\n[User question]\n${latestMsg.content}`,
+        },
+      ];
+    } else {
+      // Full text path (small docs)
+      bedrockMessages = messages.map((m, i) => {
+        if (i === 0 && m.role === 'user' && extractedText) {
+          return {
+            role: 'user',
+            content: `[Document content]\n${extractedText}\n\n[User question]\n${m.content}`,
+          };
+        }
+        return { role: m.role, content: m.content };
+      });
+    }
 
     const command = new InvokeModelWithResponseStreamCommand({
       modelId: BEDROCK_MODEL_ID,

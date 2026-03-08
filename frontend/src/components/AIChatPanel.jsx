@@ -61,6 +61,13 @@ export default function AIChatPanel({ doc, onClose }) {
           return updated;
         });
         setStreaming(false);
+      },
+      (status) => {
+        setMessages(prev => {
+          const updated = [...prev];
+          updated[updated.length - 1] = { role: 'assistant', content: status, streaming: true, status: true };
+          return updated;
+        });
       }
     );
   };

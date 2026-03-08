@@ -113,23 +113,6 @@ app.post('/api/auth/login', async (req, res) => {
       headers: { 'Cookie': `JSESSIONID=${jsessionId}` }
     });
     const profile = profileResp.ok ? await profileResp.json() : null;
-
-    // Warm up the Share CMIS API proxy — first request after login often returns HTML
-    const SHARE_API_PROXY = `${ALFRESCO_BASE}/share/proxy/alfresco-api`;
-    const warmupUrl = `${SHARE_API_PROXY}/-default-/public/alfresco/versions/1/nodes/${FDKB_DOCLIB_ID}`;
-    for (let i = 0; i < 3; i++) {
-      const warmup = await fetch(warmupUrl, {
-        headers: {
-          'Cookie': `JSESSIONID=${jsessionId}`,
-          'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-          'Accept': 'application/json, text/plain, */*',
-        }
-      });
-      const ct = warmup.headers.get('content-type') || '';
-      console.log(`[auth] Warmup ${i + 1}: status=${warmup.status} content-type=${ct}`);
-      if (ct.includes('application/json')) break;
-      await new Promise(r => setTimeout(r, 500));
-    }
     const resolvedUsername = profile?.userName || username;
 
     const sessionId = Buffer.from(`${resolvedUsername}:${Date.now()}`).toString('base64');
@@ -244,15 +227,23 @@ async function alfrescoFetch(url, session, options = {}) {
       'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
       'Accept': 'application/json, text/plain, */*',
     };
-    const resp = await fetch(shareUrl, { ...options, headers });
-    const respContentType = resp.headers.get('content-type') || '';
+    let resp = await fetch(shareUrl, { ...options, headers });
+    let respContentType = resp.headers.get('content-type') || '';
     if (respContentType.includes('text/html')) {
-      // Alfresco session expired — Share returned login page instead of JSON
-      console.error('[auth] JSESSIONID expired — got HTML instead of JSON | url:', shareUrl);
-      return new Response(JSON.stringify({ error: 'Session expired' }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      // Share proxy sometimes returns HTML on first request — retry once
+      console.warn('[auth] Got HTML instead of JSON, retrying... | url:', shareUrl);
+      await new Promise(r => setTimeout(r, 500));
+      resp = await fetch(shareUrl, { ...options, headers });
+      respContentType = resp.headers.get('content-type') || '';
+      if (respContentType.includes('text/html')) {
+        // Still HTML after retry — session is truly expired
+        console.error('[auth] JSESSIONID expired — got HTML after retry | url:', shareUrl);
+        return new Response(JSON.stringify({ error: 'Session expired' }), {
+          status: 401,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+      console.log('[auth] Retry succeeded — got JSON');
     }
     return resp;
   }

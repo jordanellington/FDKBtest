@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { X, Download, FileText, Calendar, Layers, Shield, ExternalLink, User, ChevronDown, ChevronUp, MessageSquare, Search } from 'lucide-react';
+import { X, Download, FileText, Calendar, Layers, Shield, ExternalLink, User, ChevronDown, ChevronUp, Sparkles, Search } from 'lucide-react';
 import { classifyDocument, extractMetadata } from '../lib/copyright';
 import { getContentUrl } from '../lib/api';
 
@@ -73,7 +73,7 @@ function PdfViewer({ fileUrl, searchQuery }) {
           className="viewer-toolbar shrink-0 flex items-center justify-between"
           style={{
             padding: '6px 12px',
-            background: '#1a1e1c',
+            background: 'var(--color-bg-secondary)',
             borderBottom: '1px solid rgba(255,255,255,0.04)',
           }}
         >
@@ -240,27 +240,19 @@ export default function DocumentViewer({ document: doc, searchQuery, onClose }) 
       {/* Header */}
       <div
         className="viewer-header flex items-center justify-between gap-3 shrink-0"
-        style={{ padding: '10px 16px', borderBottom: '1px solid rgba(255,255,255,0.04)' }}
+        style={{
+          padding: '12px 16px',
+          background: 'var(--color-bg-elevated)',
+          borderBottom: '1px solid rgba(255,255,255,0.06)',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
+        }}
       >
-        <div className="flex items-center gap-2 min-w-0 flex-1">
-          <FileText size={15} className="text-accent shrink-0" strokeWidth={1.5} />
-          <h2 className="text-[13px] font-semibold truncate">{doc.name}</h2>
+        <div className="flex items-center gap-2.5 min-w-0 flex-1">
+          <FileText size={15} style={{ color: 'var(--color-accent)' }} className="shrink-0" strokeWidth={1.5} />
+          <h2 className="text-[14px] font-semibold truncate" style={{ fontFamily: 'var(--font-display)' }}>{doc.name}</h2>
         </div>
         <div className="flex items-center gap-1.5 shrink-0">
           <DistributionBadge classification={classification} />
-          {isPdf && (
-            <button
-              onClick={() => setChatOpen(!chatOpen)}
-              title={chatOpen ? 'Close AI chat' : 'Chat with document'}
-              className="p-1.5 rounded transition-colors"
-              style={{
-                background: chatOpen ? 'rgba(200,164,78,0.12)' : 'transparent',
-                color: chatOpen ? 'var(--color-accent-gold)' : 'var(--color-text-muted)',
-              }}
-            >
-              <MessageSquare size={14} />
-            </button>
-          )}
           <button
             onClick={onClose}
             className="p-1.5 rounded text-text-muted hover:text-text-primary hover:bg-bg-elevated transition-colors"
@@ -314,7 +306,11 @@ export default function DocumentViewer({ document: doc, searchQuery, onClose }) 
       </div>
 
       {/* Compact metadata bar + expandable details */}
-      <div style={{ borderTop: '1px solid rgba(255,255,255,0.04)' }} className="shrink-0">
+      <div style={{
+        background: 'var(--color-bg-elevated)',
+        borderTop: '1px solid rgba(255,255,255,0.06)',
+        boxShadow: '0 -1px 3px rgba(0,0,0,0.2)',
+      }} className="shrink-0">
         <div className="viewer-meta-bar flex items-center gap-4 text-[11px] text-text-secondary" style={{ padding: '8px 16px' }}>
           <span className="flex items-center gap-1.5">
             <User size={10} className="text-text-muted" />
@@ -338,6 +334,31 @@ export default function DocumentViewer({ document: doc, searchQuery, onClose }) 
               <Download size={11} />
               Download
             </a>
+            {isPdf && (
+              <button
+                onClick={() => setChatOpen(!chatOpen)}
+                title={chatOpen ? 'Close AI chat' : 'Chat with document'}
+                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-semibold transition-all"
+                style={{
+                  background: chatOpen ? 'rgba(200,164,78,0.15)' : 'rgba(255,255,255,0.04)',
+                  color: chatOpen ? 'var(--color-accent-gold)' : 'var(--color-text-secondary)',
+                  border: chatOpen ? '1px solid var(--color-border-gold)' : '1px solid rgba(255,255,255,0.07)',
+                }}
+              >
+                <Sparkles size={11} />
+                Ask AI
+                <span style={{
+                  background: 'rgba(200,164,78,0.2)',
+                  color: 'var(--color-accent-gold)',
+                  padding: '0 4px',
+                  borderRadius: 4,
+                  fontSize: 8,
+                  fontWeight: 700,
+                  letterSpacing: '0.05em',
+                }}>BETA</span>
+                {chatOpen ? <ChevronDown size={10} /> : <ChevronUp size={10} />}
+              </button>
+            )}
             <button
               onClick={() => setDetailsOpen(!detailsOpen)}
               className="p-1 rounded text-text-muted hover:text-text-primary hover:bg-bg-elevated transition-colors"

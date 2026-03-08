@@ -60,16 +60,12 @@ export default function Layout() {
         flex flex-col shrink-0 bg-bg-sidebar border-r border-border pt-12
       `}>
         {/* Logo */}
-        <div className="px-6 mb-8">
-          <p className="text-[10px] font-bold tracking-[0.3em] uppercase text-text-muted">
+        <div className="px-5 pl-8 mb-10">
+          <p className="text-[10px] font-bold tracking-[0.32em] uppercase text-text-muted mb-3">
             Covington
           </p>
-          <div className="h-px bg-border my-3" />
-          <h1 className="font-display text-[28px] font-normal text-text-primary leading-none">FDKB</h1>
-          <div className="flex items-center gap-2 mt-2">
-            <span className="text-[11px] font-medium text-text-secondary tracking-wide">v2.0</span>
-            <span className="text-[9px] font-bold tracking-[0.12em] uppercase text-accent bg-accent/10 px-1.5 py-0.5 rounded">beta</span>
-          </div>
+          <h1 className="font-display text-[36px] font-normal text-text-primary leading-none">FDKB v2.0</h1>
+          <span className="inline-block mt-2 text-[10px] font-bold tracking-[0.14em] uppercase text-accent bg-accent/10 px-2 py-0.5 rounded">beta</span>
         </div>
 
         <div className="h-px bg-border mx-5 mb-4" />

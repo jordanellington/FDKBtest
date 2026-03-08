@@ -197,18 +197,13 @@ app.post('/api/auth/dev-login', async (req, res) => {
 
 app.get('/api/auth/heartbeat', requireAuth, async (req, res) => {
   try {
-    const resp = await alfrescoGet(
+    await alfrescoGet(
       `${ALFRESCO_API}/alfresco/versions/1/nodes/${FDKB_DOCLIB_ID}`,
       req.session
     );
-    // Check if Alfresco returned HTML (expired session) instead of JSON
-    const ct = resp.headers.get('content-type') || '';
-    if (ct.includes('text/html')) {
-      console.error('[heartbeat] Session expired — got HTML instead of JSON');
-      return res.status(401).json({ error: 'Session expired' });
-    }
     res.json({ ok: true });
   } catch (err) {
+    if (handleAlfrescoExpiry(err, req, res)) return;
     console.error('[heartbeat] error:', err.message);
     res.status(500).json({ error: err.message });
   }
@@ -229,7 +224,18 @@ function requireAuth(req, res, next) {
     return res.status(401).json({ error: 'Not authenticated' });
   }
   req.session = session;
+  req.sessionId = sessionId; // for cleanup on expiry
   next();
+}
+
+// Error handler: catch expired Alfresco sessions, clean up, return 401
+function handleAlfrescoExpiry(err, req, res) {
+  if (err.alfrescoExpired) {
+    console.error('[auth] Alfresco session expired, clearing session:', req.sessionId);
+    sessions.delete(req.sessionId);
+    return res.status(401).json({ error: 'Session expired' });
+  }
+  return false;
 }
 
 // Unified fetch helper: uses ticket, JSESSIONID cookie, or basic auth depending on session
@@ -270,16 +276,38 @@ async function alfrescoFetch(url, session, options = {}) {
   throw new Error('No valid auth method in session');
 }
 
+// Check if Alfresco response indicates an expired session
+function checkAlfrescoSession(resp, url) {
+  if (resp.status === 401 || resp.status === 403) {
+    const err = new Error('Alfresco session expired');
+    err.alfrescoExpired = true;
+    throw err;
+  }
+  const ct = resp.headers.get('content-type') || '';
+  // API calls returning HTML means Alfresco redirected to login page
+  // (skip content endpoints which legitimately return non-JSON)
+  if (ct.includes('text/html') && !url.includes('/content')) {
+    console.error('[alfresco] Got HTML instead of JSON — session expired. URL:', url.substring(0, 120));
+    const err = new Error('Alfresco session expired');
+    err.alfrescoExpired = true;
+    throw err;
+  }
+}
+
 async function alfrescoGet(url, session) {
-  return alfrescoFetch(url, session);
+  const resp = await alfrescoFetch(url, session);
+  checkAlfrescoSession(resp, url);
+  return resp;
 }
 
 async function alfrescoPost(url, session, body) {
-  return alfrescoFetch(url, session, {
+  const resp = await alfrescoFetch(url, session, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body)
   });
+  checkAlfrescoSession(resp, url);
+  return resp;
 }
 
 // --------------- Sites ---------------
@@ -297,6 +325,7 @@ app.get('/api/site', requireAuth, async (req, res) => {
     const data = await resp.json();
     res.json(data.entry);
   } catch (err) {
+    if (handleAlfrescoExpiry(err, req, res)) return;
     res.status(500).json({ error: err.message });
   }
 });
@@ -322,6 +351,7 @@ app.get('/api/nodes/:nodeId/children', requireAuth, async (req, res) => {
     }
     res.json(data);
   } catch (err) {
+    if (handleAlfrescoExpiry(err, req, res)) return;
     console.error('Children error:', err);
     res.status(500).json({ error: err.message });
   }
@@ -338,6 +368,7 @@ app.get('/api/nodes/:nodeId', requireAuth, async (req, res) => {
     const data = await resp.json();
     res.json(data.entry);
   } catch (err) {
+    if (handleAlfrescoExpiry(err, req, res)) return;
     res.status(500).json({ error: err.message });
   }
 });
@@ -375,6 +406,7 @@ app.post('/api/search', requireAuth, async (req, res) => {
     const data = await resp.json();
     res.json(data);
   } catch (err) {
+    if (handleAlfrescoExpiry(err, req, res)) return;
     console.error('[search] error:', err.message);
     res.status(500).json({ error: err.message });
   }
@@ -390,6 +422,12 @@ app.get('/api/nodes/:nodeId/content', requireAuth, async (req, res) => {
       req.session
     );
 
+    // Content endpoint: check for 401/403 (HTML check skipped since content is binary)
+    if (resp.status === 401 || resp.status === 403) {
+      sessions.delete(req.sessionId);
+      return res.status(401).json({ error: 'Session expired' });
+    }
+
     const contentType = resp.headers.get('content-type');
     res.set('Content-Type', contentType);
     // Use inline disposition so PDFs render in iframes instead of downloading
@@ -400,6 +438,7 @@ app.get('/api/nodes/:nodeId/content', requireAuth, async (req, res) => {
     const buffer = await resp.arrayBuffer();
     res.send(Buffer.from(buffer));
   } catch (err) {
+    if (handleAlfrescoExpiry(err, req, res)) return;
     res.status(500).json({ error: err.message });
   }
 });
@@ -426,21 +465,17 @@ app.get('/api/stats', requireAuth, async (req, res) => {
       `${ALFRESCO_API}/alfresco/versions/1/nodes/${FDKB_DOCLIB_ID}/children?maxItems=1&where=(isFolder=true)`,
       req.session
     );
-    if (foldersResp.status === 401) return res.status(401).json({ error: 'Session expired' });
     const foldersData = await foldersResp.json();
 
     res.json({
-      totalDocuments: data.list?.pagination?.totalItems || 368261,
-      practiceAreas: foldersData.list?.pagination?.totalItems || 22,
+      totalDocuments: data.list?.pagination?.totalItems ?? 0,
+      practiceAreas: foldersData.list?.pagination?.totalItems ?? 0,
       yearRange: '1947 - Present'
     });
   } catch (err) {
+    if (handleAlfrescoExpiry(err, req, res)) return;
     console.error('Stats error:', err);
-    res.json({
-      totalDocuments: 368261,
-      practiceAreas: 22,
-      yearRange: '1947 - Present'
-    });
+    res.status(500).json({ error: err.message });
   }
 });
 

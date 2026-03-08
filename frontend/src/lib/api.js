@@ -56,8 +56,23 @@ function stopHeartbeat() {
   }
 }
 
-// Start heartbeat if we already have a session on load
-if (sessionId) startHeartbeat();
+// Validate session immediately on load, then start heartbeat
+if (sessionId) {
+  // Fire-and-forget: check if session is still valid right away
+  fetch(`${API_URL}/api/auth/heartbeat`, {
+    headers: { 'x-session-id': sessionId },
+  }).then(resp => {
+    if (resp.status === 401) {
+      setSession(null);
+      window.location.href = '/login';
+    } else {
+      startHeartbeat();
+    }
+  }).catch(() => {
+    // Network error — start heartbeat anyway, it'll retry
+    startHeartbeat();
+  });
+}
 
 export async function login(username, password) {
   const resp = await request('/api/auth/login', {
@@ -142,6 +157,11 @@ export async function chatStream(messages, doc, onDelta, onDone, onError, onStat
     body: JSON.stringify({ messages, document: doc }),
   });
 
+  if (resp.status === 401) {
+    setSession(null);
+    window.location.href = '/login';
+    return;
+  }
   if (!resp.ok) {
     const err = await resp.json().catch(() => ({ error: 'Chat request failed' }));
     onError(err.error || 'Chat request failed');

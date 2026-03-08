@@ -312,3 +312,35 @@ body {
   from { opacity: 0; transform: scale(0.9); }
   to { opacity: 1; transform: scale(1); }
 }
+
+/* Chat markdown styles */
+.chat-markdown p { margin: 0 0 8px; }
+.chat-markdown p:last-child { margin-bottom: 0; }
+.chat-markdown strong { color: var(--color-text-primary); font-weight: 600; }
+.chat-markdown ul, .chat-markdown ol { margin: 4px 0 8px; padding-left: 18px; }
+.chat-markdown li { margin-bottom: 3px; }
+.chat-markdown h1, .chat-markdown h2, .chat-markdown h3 {
+  color: var(--color-text-primary);
+  font-weight: 600;
+  margin: 10px 0 4px;
+  font-size: 12px;
+}
+.chat-markdown code {
+  background: rgba(255,255,255,0.06);
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-size: 11px;
+}
+.chat-markdown pre {
+  background: rgba(255,255,255,0.04);
+  padding: 8px;
+  border-radius: 4px;
+  overflow-x: auto;
+  margin: 6px 0;
+}
+.chat-markdown blockquote {
+  border-left: 2px solid rgba(255,255,255,0.1);
+  padding-left: 10px;
+  margin: 6px 0;
+  color: var(--color-text-muted);
+}

@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { X, Send, Sparkles } from 'lucide-react';
+import Markdown from 'react-markdown';
 import { chatStream } from '../lib/api';
 import { extractMetadata } from '../lib/copyright';
 
@@ -178,11 +179,17 @@ export default function AIChatPanel({ doc, onClose }) {
                       ? 'var(--color-accent)'
                       : 'var(--color-bg-elevated)',
                     borderLeft: msg.role === 'assistant' && !msg.error ? '2px solid var(--color-accent-gold)' : undefined,
-                    whiteSpace: 'pre-wrap',
                     wordBreak: 'break-word',
+                    ...(msg.role === 'user' ? { whiteSpace: 'pre-wrap' } : {}),
                   }}
                 >
-                  {msg.content || (msg.streaming ? '...' : '')}
+                  {msg.role === 'assistant' && msg.content ? (
+                    <div className="chat-markdown">
+                      <Markdown>{msg.content}</Markdown>
+                    </div>
+                  ) : (
+                    msg.content || (msg.streaming ? '...' : '')
+                  )}
                   {msg.streaming && <span className="animate-pulse" style={{ color: 'var(--color-accent-gold)' }}>|</span>}
                 </div>
               </div>

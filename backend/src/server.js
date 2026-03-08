@@ -104,9 +104,17 @@ async function casLogin(username, password) {
   }
   if (!jsessionId) throw new Error('Failed to obtain JSESSIONID from Share');
 
+  // Extract CSRF token for POST requests
+  let csrfToken = null;
+  for (const c of allCookies) {
+    const match = c.match(/Alfresco-CSRFToken=(.+)/);
+    if (match) { csrfToken = decodeURIComponent(match[1]); break; }
+  }
+
   const cookieString = allCookies.join('; ');
   console.log('[auth] Full cookie string:', cookieString);
-  return { jsessionId, cookieString };
+  console.log('[auth] CSRF token:', csrfToken ? 'found' : 'not found');
+  return { jsessionId, cookieString, csrfToken };
 }
 
 // --------------- Auth ---------------
@@ -116,7 +124,7 @@ app.post('/api/auth/login', async (req, res) => {
 
   try {
     // Authenticate through CAS SSO
-    const { jsessionId, cookieString } = await casLogin(username, password);
+    const { jsessionId, cookieString, csrfToken } = await casLogin(username, password);
     console.log('[auth] CAS login succeeded for', username);
 
     // Validate session and get profile
@@ -127,7 +135,7 @@ app.post('/api/auth/login', async (req, res) => {
     const resolvedUsername = profile?.userName || username;
 
     const sessionId = Buffer.from(`${resolvedUsername}:${Date.now()}`).toString('base64');
-    sessions.set(sessionId, { jsessionId, cookieString, username: resolvedUsername });
+    sessions.set(sessionId, { jsessionId, cookieString, csrfToken, username: resolvedUsername });
 
     res.json({
       sessionId,
@@ -220,7 +228,7 @@ function requireAuth(req, res, next) {
 
 // Unified fetch helper: uses ticket, JSESSIONID cookie, or basic auth depending on session
 async function alfrescoFetch(url, session, options = {}) {
-  const { ticket, jsessionId, cookieString, basicAuth } = session;
+  const { ticket, jsessionId, cookieString, csrfToken, basicAuth } = session;
 
   if (ticket) {
     // Use alf_ticket param
@@ -239,7 +247,8 @@ async function alfrescoFetch(url, session, options = {}) {
     );
     const headers = {
       ...options.headers,
-      'Cookie': `JSESSIONID=${jsessionId}`,
+      'Cookie': cookieString || `JSESSIONID=${jsessionId}`,
+      ...(csrfToken ? { 'Alfresco-CSRFToken': csrfToken } : {}),
     };
     return fetch(shareUrl, { ...options, headers });
   }

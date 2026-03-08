@@ -227,7 +227,15 @@ export default function DocumentViewer({ document: doc, searchQuery, onClose }) 
       exit={{ x: '100%', opacity: 0 }}
       transition={{ type: 'spring', damping: 30, stiffness: 300 }}
       className="document-viewer-panel flex flex-col h-full"
-      style={{ width: 728, maxWidth: '50%', minWidth: 340, flex: '0 1 auto', background: 'var(--color-bg-secondary)', borderLeft: '1px solid rgba(255,255,255,0.07)' }}
+      style={{
+        width: chatOpen ? '70vw' : 728,
+        maxWidth: chatOpen ? '75%' : '50%',
+        minWidth: 340,
+        flex: '0 1 auto',
+        background: 'var(--color-bg-secondary)',
+        borderLeft: '1px solid rgba(255,255,255,0.07)',
+        transition: 'width 0.3s ease, max-width 0.3s ease',
+      }}
     >
       {/* Header */}
       <div
@@ -263,7 +271,7 @@ export default function DocumentViewer({ document: doc, searchQuery, onClose }) 
       </div>
 
       {/* Document Preview + Chat */}
-      <div className="flex-1 min-h-0 flex flex-col">
+      <div className={`flex-1 min-h-0 flex ${chatOpen ? 'flex-row' : 'flex-col'}`}>
         {/* PDF / Document area */}
         <div
           className="min-h-0 overflow-hidden"
@@ -290,12 +298,13 @@ export default function DocumentViewer({ document: doc, searchQuery, onClose }) 
           )}
         </div>
 
-        {/* AI Chat Bottom Drawer */}
+        {/* AI Chat Right Column */}
         {chatOpen && (
           <div
             style={{
-              flex: '1 1 0%',
-              borderTop: '1px solid rgba(255,255,255,0.07)',
+              width: '35%',
+              minWidth: 280,
+              borderLeft: '1px solid rgba(255,255,255,0.07)',
               minHeight: 0,
             }}
           >

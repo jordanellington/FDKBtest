@@ -4,6 +4,7 @@ import { AnimatePresence } from 'framer-motion';
 import { useAuth } from '../hooks/useAuth';
 import { LogOut, Menu, X, Sun, Moon } from 'lucide-react';
 import AiChat from './AiChat';
+import PortalNav from './PortalNav';
 import { getTheme, saveTheme, applyTheme } from '../lib/theme';
 
 export default function Layout() {
@@ -31,6 +32,7 @@ export default function Layout() {
 
   return (
     <div className="flex flex-col h-screen overflow-hidden bg-bg-primary">
+      <PortalNav />
       {/* Top header bar — matches OPDTEST */}
       <header className="flex items-center justify-between px-6 bg-bg-sidebar border-b border-border shrink-0" style={{ paddingTop: 20, paddingBottom: 20 }}>
         <div style={{ paddingLeft: 8 }}>

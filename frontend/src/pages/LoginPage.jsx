@@ -1,10 +1,12 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useAuth } from '../hooks/useAuth';
 import { ArrowRight } from 'lucide-react';
+import { getTheme, applyTheme } from '../lib/theme';
 
 export default function LoginPage() {
+  useEffect(() => { applyTheme(getTheme()); }, []);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');

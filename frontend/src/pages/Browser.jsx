@@ -22,7 +22,7 @@ function Breadcrumbs({ path, onNavigate }) {
         <span key={el.id} className="flex items-center gap-1.5">
           <ChevronRight size={11} className="text-text-dim" />
           {i === visible.length - 1 ? (
-            <span className="text-white font-semibold text-[15px]">{el.name}</span>
+            <span className="text-text-primary font-semibold text-[15px]">{el.name}</span>
           ) : (
             <button onClick={() => onNavigate(el.id)} className="text-text-muted hover:text-accent transition-colors">{el.name}</button>
           )}
@@ -104,7 +104,7 @@ export default function Browser() {
               className="page-section-hero"
               style={{ padding: '44px 56px 0', marginBottom: 32 }}
             >
-              <h1 className="page-title font-display text-[42px] font-light text-white leading-[1.08] tracking-[-0.02em]" style={{ marginBottom: 10 }}>
+              <h1 className="page-title font-display text-[42px] font-light text-text-primary leading-[1.08] tracking-[-0.02em]" style={{ marginBottom: 10 }}>
                 Documents
               </h1>
               <p className="text-text-muted text-[14px]">Browse the complete FDKB document library</p>
@@ -148,7 +148,7 @@ export default function Browser() {
                   style={{ padding: '0 56px 56px' }}
                 >
                   <div className="flex items-baseline justify-between" style={{ marginBottom: 20 }}>
-                    <h2 className="section-heading font-display text-[24px] font-normal text-white">Subject Areas</h2>
+                    <h2 className="section-heading font-display text-[24px] font-normal text-text-primary">Subject Areas</h2>
                     <span className="text-[11px] font-medium text-text-muted">{numbered.length} areas</span>
                   </div>
                   <div className="subject-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6 }}>
@@ -165,33 +165,33 @@ export default function Browser() {
                             gap: 12,
                             padding: '14px 16px',
                             borderRadius: 8,
-                            background: '#151c19',
-                            boxShadow: '0 1px 3px rgba(0,0,0,0.3), 0 1px 2px rgba(0,0,0,0.2)',
-                            border: '1px solid rgba(255,255,255,0.04)',
+                            background: 'var(--color-bg-secondary)',
+                            boxShadow: 'var(--shadow-card)',
+                            border: '1px solid var(--color-border)',
                           }}
                           onMouseEnter={(e) => {
-                            e.currentTarget.style.background = '#222e2a';
-                            e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,0,0,0.35), 0 2px 4px rgba(0,0,0,0.2)';
-                            e.currentTarget.style.borderColor = 'rgba(255,255,255,0.11)';
+                            e.currentTarget.style.background = 'var(--color-bg-hover)';
+                            e.currentTarget.style.boxShadow = 'var(--shadow-md)';
+                            e.currentTarget.style.borderColor = 'var(--color-border-strong)';
                             e.currentTarget.style.transform = 'translateY(-1px)';
-                            e.currentTarget.querySelector('.card-id').style.color = '#4db8a4';
-                            e.currentTarget.querySelector('.card-name').style.color = '#fff';
+                            e.currentTarget.querySelector('.card-id').style.color = 'var(--color-accent)';
+                            e.currentTarget.querySelector('.card-name').style.color = 'var(--color-text-primary)';
                           }}
                           onMouseLeave={(e) => {
-                            e.currentTarget.style.background = '#151c19';
-                            e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.3), 0 1px 2px rgba(0,0,0,0.2)';
-                            e.currentTarget.style.borderColor = 'rgba(255,255,255,0.04)';
+                            e.currentTarget.style.background = 'var(--color-bg-secondary)';
+                            e.currentTarget.style.boxShadow = 'var(--shadow-card)';
+                            e.currentTarget.style.borderColor = 'var(--color-border)';
                             e.currentTarget.style.transform = 'none';
-                            e.currentTarget.querySelector('.card-id').style.color = '#5f706a';
-                            e.currentTarget.querySelector('.card-name').style.color = '#e6eae8';
+                            e.currentTarget.querySelector('.card-id').style.color = 'var(--color-text-muted)';
+                            e.currentTarget.querySelector('.card-name').style.color = 'var(--color-text-primary)';
                           }}
                         >
                           <span className="card-id text-[11px] font-bold tracking-[0.02em] transition-colors duration-200"
-                            style={{ color: '#5f706a', minWidth: 22 }}>
+                            style={{ color: 'var(--color-text-muted)', minWidth: 22 }}>
                             {num}
                           </span>
                           <span className="card-name text-[13px] font-medium leading-snug transition-colors duration-150"
-                            style={{ color: '#e6eae8' }}>
+                            style={{ color: 'var(--color-text-primary)' }}>
                             {title}
                           </span>
                         </div>
@@ -210,14 +210,14 @@ export default function Browser() {
                   className="page-section"
                   style={{ padding: '0 56px 80px' }}
                 >
-                  <h2 className="section-heading font-display text-[24px] font-normal text-white" style={{ marginBottom: 20 }}>Special Collections</h2>
+                  <h2 className="section-heading font-display text-[24px] font-normal text-text-primary" style={{ marginBottom: 20 }}>Special Collections</h2>
                   <div className="collections-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0 32px' }}>
                     {special.map((f) => (
                       <div
                         key={f.id}
                         onClick={() => handleNavigate(f.id)}
                         className="cursor-pointer"
-                        style={{ padding: '10px 0', borderBottom: '1px solid rgba(255,255,255,0.04)' }}
+                        style={{ padding: '10px 0', borderBottom: '1px solid var(--color-border)' }}
                       >
                         <span className="text-[13px] text-text-secondary hover:text-accent-bright transition-colors duration-150">
                           {f.name}
@@ -250,20 +250,20 @@ export default function Browser() {
                           gap: 10,
                           padding: '14px 16px',
                           borderRadius: 8,
-                          background: '#151c19',
-                          boxShadow: '0 1px 3px rgba(0,0,0,0.3), 0 1px 2px rgba(0,0,0,0.2)',
-                          border: '1px solid rgba(255,255,255,0.04)',
+                          background: 'var(--color-bg-secondary)',
+                          boxShadow: 'var(--shadow-card)',
+                          border: '1px solid var(--color-border)',
                         }}
                         onMouseEnter={(e) => {
-                          e.currentTarget.style.background = '#222e2a';
-                          e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,0,0,0.35), 0 2px 4px rgba(0,0,0,0.2)';
-                          e.currentTarget.style.borderColor = 'rgba(255,255,255,0.11)';
+                          e.currentTarget.style.background = 'var(--color-bg-hover)';
+                          e.currentTarget.style.boxShadow = 'var(--shadow-md)';
+                          e.currentTarget.style.borderColor = 'var(--color-border-strong)';
                           e.currentTarget.style.transform = 'translateY(-1px)';
                         }}
                         onMouseLeave={(e) => {
-                          e.currentTarget.style.background = '#151c19';
-                          e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.3), 0 1px 2px rgba(0,0,0,0.2)';
-                          e.currentTarget.style.borderColor = 'rgba(255,255,255,0.04)';
+                          e.currentTarget.style.background = 'var(--color-bg-secondary)';
+                          e.currentTarget.style.boxShadow = 'var(--shadow-card)';
+                          e.currentTarget.style.borderColor = 'var(--color-border)';
                           e.currentTarget.style.transform = 'none';
                         }}
                       >
@@ -309,7 +309,7 @@ export default function Browser() {
                             borderRadius: 8,
                             marginBottom: 4,
                             cursor: 'pointer',
-                            border: isSelected ? '1px solid rgba(255,255,255,0.07)' : '1px solid transparent',
+                            border: isSelected ? '1px solid var(--color-border-mid)' : '1px solid transparent',
                             background: isSelected ? 'var(--color-bg-elevated)' : 'transparent',
                             transition: 'all 0.12s ease',
                             position: 'relative',
@@ -333,7 +333,7 @@ export default function Browser() {
                             />
                             <span style={{
                               fontSize: 13, fontWeight: 600,
-                              color: isSelected ? '#fff' : 'var(--color-text-secondary)',
+                              color: isSelected ? 'var(--color-text-primary)' : 'var(--color-text-secondary)',
                             }}>
                               {file.name}
                             </span>

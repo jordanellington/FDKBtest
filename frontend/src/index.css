@@ -48,6 +48,51 @@
   --font-body: 'Plus Jakarta Sans', -apple-system, system-ui, sans-serif;
 }
 
+/* ===== Light Theme Override ===== */
+html.light {
+  --color-bg-primary: #f5f6f5;
+  --color-bg-sidebar: #eaedeb;
+  --color-bg-secondary: #ffffff;
+  --color-bg-elevated: #f0f2f1;
+  --color-bg-card: #ffffff;
+  --color-bg-input: #ffffff;
+  --color-bg-hover: #e4e8e6;
+
+  --color-accent: #2a9a85;
+  --color-accent-bright: #1f8872;
+  --color-accent-hover: #238a77;
+  --color-accent-gold: #a88730;
+  --color-accent-light: rgba(42, 154, 133, 0.08);
+
+  --color-text-primary: #1a2420;
+  --color-text-secondary: #506860;
+  --color-text-muted: #7d8e88;
+  --color-text-dim: #a8b5b0;
+  --color-text-on-dark: #ffffff;
+
+  --color-status-green: #2a9a85;
+  --color-status-amber: #a88730;
+  --color-status-red: #b04545;
+
+  --color-border: rgba(0, 0, 0, 0.06);
+  --color-border-mid: rgba(0, 0, 0, 0.10);
+  --color-border-strong: rgba(0, 0, 0, 0.16);
+  --color-border-accent: rgba(42, 154, 133, 0.30);
+  --color-border-gold: rgba(168, 135, 48, 0.3);
+
+  --shadow-card: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-md: 0 4px 16px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.04);
+  --shadow-lg: 0 8px 32px rgba(0,0,0,0.10), 0 4px 8px rgba(0,0,0,0.06);
+  --shadow-glow: 0 4px 24px rgba(42,154,133,0.06);
+
+  --color-overlay-subtle: rgba(0, 0, 0, 0.03);
+  --color-overlay-muted: rgba(0, 0, 0, 0.05);
+  --color-overlay-hover: rgba(0, 0, 0, 0.08);
+}
+
+html.light ::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.12); }
+html.light ::selection { background: rgba(42,154,133,0.2); color: #1a2420; }
+
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
 body {
@@ -196,6 +241,52 @@ body {
 .rpv-dark-theme .rpv-core__page-layer {
   box-shadow: 0 2px 12px rgba(0,0,0,0.4);
 }
+
+/* ===== PDF Viewer — Light Mode Overrides ===== */
+html.light .rpv-dark-theme,
+html.light .rpv-dark-theme .rpv-core__viewer,
+html.light .rpv-dark-theme .rpv-core__inner-container,
+html.light .rpv-dark-theme .rpv-core__inner-pages,
+html.light .rpv-dark-theme div[class^="rpv-core"] {
+  background-color: #e8eaea !important;
+}
+html.light .rpv-dark-theme .rpv-core__textbox {
+  background-color: #ffffff;
+  border-color: rgba(0,0,0,0.12);
+  color: #1a2420;
+}
+html.light .rpv-dark-theme .rpv-page-navigation__current-page-input .rpv-core__textbox {
+  background-color: #ffffff;
+  border-color: rgba(0,0,0,0.12);
+  color: #1a2420;
+}
+html.light .rpv-dark-theme .rpv-core__input {
+  background-color: #ffffff;
+  border-color: rgba(0,0,0,0.12);
+  color: #1a2420;
+}
+html.light .rpv-dark-theme .rpv-core__popover-body {
+  background-color: #ffffff;
+  border: 1px solid rgba(0,0,0,0.10);
+  color: #1a2420;
+}
+html.light .rpv-dark-theme .rpv-core__menu-item { color: #1a2420; }
+html.light .rpv-dark-theme .rpv-core__menu-item:hover { background-color: rgba(0,0,0,0.05); }
+html.light .rpv-dark-theme .rpv-toolbar__item button,
+html.light .rpv-dark-theme .rpv-toolbar__item a { color: #506860; }
+html.light .rpv-dark-theme .rpv-toolbar__item button:hover,
+html.light .rpv-dark-theme .rpv-toolbar__item a:hover { color: #1a2420; background-color: rgba(0,0,0,0.05); }
+html.light .rpv-dark-theme .rpv-zoom__popover-target-scale { color: #506860; }
+html.light .rpv-dark-theme .rpv-search__popover { background-color: #ffffff; border: 1px solid rgba(0,0,0,0.10); box-shadow: 0 4px 16px rgba(0,0,0,0.08); }
+html.light .rpv-dark-theme .rpv-search__popover-input-counter { background-color: #ffffff; border-color: rgba(0,0,0,0.12); color: #1a2420; }
+html.light .rpv-dark-theme .rpv-search__popover-counter { color: #7d8e88; }
+html.light .rpv-dark-theme .rpv-search__popover-label { color: #506860; }
+html.light .rpv-dark-theme .rpv-search__popover-button { color: #506860; border-color: rgba(0,0,0,0.12); }
+html.light .rpv-dark-theme .rpv-search__popover-button:hover { color: #1a2420; background-color: rgba(0,0,0,0.05); }
+html.light .rpv-dark-theme .rpv-search__popover .rpv-core__minimal-button { color: #1a2420; }
+html.light .rpv-dark-theme .rpv-search__popover .rpv-core__minimal-button:hover { background-color: rgba(0,0,0,0.06); }
+html.light .rpv-dark-theme .rpv-search__popover .rpv-core__minimal-button--disabled { color: #a8b5b0; }
+html.light .rpv-dark-theme .rpv-core__page-layer { box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
 
 /* ===== Mobile Responsive Overrides ===== */
 

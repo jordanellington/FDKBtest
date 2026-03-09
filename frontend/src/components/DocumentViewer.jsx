@@ -67,7 +67,7 @@ function PdfViewer({ fileUrl, searchQuery }) {
 
   return (
     <Worker workerUrl={WORKER_URL}>
-      <div className="h-full flex flex-col rpv-dark-theme">
+      <div className="h-full flex flex-col rpv-dark-theme" style={{ backgroundColor: 'var(--color-bg-elevated)' }}>
         {/* Custom toolbar */}
         <div
           className="viewer-toolbar shrink-0 flex items-center justify-between"
@@ -233,7 +233,7 @@ export default function DocumentViewer({ document: doc, searchQuery, onClose }) 
         minWidth: 340,
         flex: '0 1 auto',
         background: 'var(--color-bg-secondary)',
-        borderLeft: '1px solid rgba(255,255,255,0.07)',
+        borderLeft: 'none',
         transition: 'width 0.3s ease, max-width 0.3s ease',
       }}
     >
@@ -243,8 +243,7 @@ export default function DocumentViewer({ document: doc, searchQuery, onClose }) 
         style={{
           padding: '12px 16px',
           background: 'var(--color-bg-elevated)',
-          borderBottom: '1px solid rgba(255,255,255,0.06)',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
+          borderBottom: '1px solid var(--color-border)',
         }}
       >
         <div className="flex items-center gap-2.5 min-w-0 flex-1">
@@ -296,7 +295,7 @@ export default function DocumentViewer({ document: doc, searchQuery, onClose }) 
             style={{
               width: '35%',
               minWidth: 280,
-              borderLeft: '1px solid rgba(255,255,255,0.07)',
+              borderLeft: 'none',
               minHeight: 0,
             }}
           >
@@ -308,8 +307,7 @@ export default function DocumentViewer({ document: doc, searchQuery, onClose }) 
       {/* Compact metadata bar + expandable details */}
       <div style={{
         background: 'var(--color-bg-elevated)',
-        borderTop: '1px solid rgba(255,255,255,0.06)',
-        boxShadow: '0 -1px 3px rgba(0,0,0,0.2)',
+        borderTop: '1px solid var(--color-border)',
       }} className="shrink-0">
         <div className="viewer-meta-bar flex items-center gap-5 text-[11px] text-text-secondary" style={{ padding: '10px 12px 10px 16px' }}>
           <span className="flex items-center gap-1.5">

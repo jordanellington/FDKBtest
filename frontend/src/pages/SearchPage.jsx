@@ -101,30 +101,30 @@ export default function SearchPage() {
     <div className="flex h-full overflow-hidden">
       <div ref={scrollRef} className="flex-1 overflow-y-auto min-w-0">
         <div className="max-w-[1100px]">
-          {/* Header */}
-          <motion.div
-            initial={{ opacity: 0, y: 14 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.45 }}
-            style={{ padding: results ? '24px 28px 0' : '44px 56px 0', marginBottom: results ? 16 : 32, transition: 'all 0.3s ease' }}
-          >
-            <h1
-              className="page-title font-display font-light text-white leading-[1.08] tracking-[-0.02em]"
-              style={{ fontSize: results ? 24 : 42, marginBottom: results ? 6 : 10, transition: 'all 0.3s ease' }}
+          {/* Header — only shown before initial results load */}
+          {!results && (
+            <motion.div
+              initial={{ opacity: 0, y: 14 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.45 }}
+              style={{ padding: '44px 56px 0', marginBottom: 32 }}
             >
-              Search
-            </h1>
-            {!results && (
+              <h1
+                className="page-title text-text-primary leading-[1.1] tracking-[-0.02em]"
+                style={{ fontSize: 36, fontFamily: 'var(--font-display)', fontWeight: 300, marginBottom: 10 }}
+              >
+                Search
+              </h1>
               <p className="text-text-muted text-[14px]">Search across the full FDKB document library</p>
-            )}
-          </motion.div>
+            </motion.div>
+          )}
 
           {/* Search Input */}
           <motion.div
             initial={{ opacity: 0, y: 14 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.05, duration: 0.45 }}
-            style={{ padding: results ? '0 28px 20px' : '0 56px 40px' }}
+            style={{ padding: results ? '14px 28px 28px' : '0 56px 40px' }}
           >
             <form onSubmit={(e) => { e.preventDefault(); handleSearch(); }}>
               <div
@@ -133,16 +133,16 @@ export default function SearchPage() {
                   gap: 14,
                   padding: '14px 16px 14px 20px',
                   borderRadius: 10,
-                  background: searchFocused ? '#151c19' : '#121816',
-                  border: `1px solid ${searchFocused ? 'rgba(77,184,164,0.25)' : 'rgba(255,255,255,0.06)'}`,
-                  boxShadow: searchFocused ? '0 0 0 3px rgba(77,184,164,0.06), 0 4px 20px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.2)',
+                  background: searchFocused ? 'var(--color-bg-secondary)' : 'var(--color-bg-input)',
+                  border: `1px solid ${searchFocused ? 'var(--color-border-accent)' : 'var(--color-border-mid)'}`,
+                  boxShadow: searchFocused ? '0 0 0 3px var(--color-accent-light), var(--shadow-md)' : 'var(--shadow-card)',
                 }}
                 onClick={() => document.getElementById('fdkb-search-input')?.focus()}
               >
                 <Search
                   size={18}
                   className="shrink-0 transition-colors duration-200"
-                  style={{ color: searchFocused ? '#4db8a4' : '#4a5955' }}
+                  style={{ color: searchFocused ? 'var(--color-accent)' : 'var(--color-text-dim)' }}
                   strokeWidth={2}
                 />
 
@@ -159,7 +159,7 @@ export default function SearchPage() {
                       animation: 'chipIn 0.15s ease',
                     }}
                   >
-                    <span style={{ fontSize: 11, fontWeight: 600, color: '#4db8a4', letterSpacing: '0.02em', whiteSpace: 'nowrap' }}>
+                    <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--color-accent)', letterSpacing: '0.02em', whiteSpace: 'nowrap' }}>
                       Exact
                     </span>
                     <button
@@ -169,7 +169,7 @@ export default function SearchPage() {
                       style={{
                         width: 14, height: 14, borderRadius: 3,
                         background: 'rgba(77,184,164,0.15)',
-                        border: 'none', cursor: 'pointer', color: '#4db8a4',
+                        border: 'none', cursor: 'pointer', color: 'var(--color-accent)',
                       }}
                       onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(77,184,164,0.25)'}
                       onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(77,184,164,0.15)'}
@@ -190,7 +190,7 @@ export default function SearchPage() {
                   onBlur={() => setSearchFocused(false)}
                   placeholder="Search across 368,000+ documents by keyword, citation, or topic..."
                   className="flex-1 outline-none"
-                  style={{ fontFamily: 'inherit', fontSize: 15, fontWeight: 400, color: '#e6eae8', letterSpacing: '-0.01em', minWidth: 0, background: 'none', backgroundColor: 'transparent', border: 'none', colorScheme: 'dark', WebkitAppearance: 'none', padding: 0 }}
+                  style={{ fontFamily: 'inherit', fontSize: 15, fontWeight: 400, color: 'var(--color-text-primary)', letterSpacing: '-0.01em', minWidth: 0, background: 'none', backgroundColor: 'transparent', border: 'none', colorScheme: 'auto', WebkitAppearance: 'none', padding: 0 }}
                 />
 
                 {/* Right controls */}
@@ -204,26 +204,26 @@ export default function SearchPage() {
                       gap: 5,
                       padding: '5px 10px',
                       borderRadius: 5,
-                      background: exactMatch ? 'rgba(77,184,164,0.10)' : 'rgba(255,255,255,0.04)',
-                      border: `1px solid ${exactMatch ? 'rgba(77,184,164,0.20)' : 'rgba(255,255,255,0.06)'}`,
+                      background: exactMatch ? 'var(--color-accent-light)' : 'var(--color-overlay-subtle)',
+                      border: `1px solid ${exactMatch ? 'var(--color-border-accent)' : 'var(--color-border)'}`,
                       cursor: 'pointer',
                     }}
                     title="Toggle exact phrase matching"
                   >
                     {/* Quote marks icon */}
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
-                      style={{ color: exactMatch ? '#4db8a4' : '#5f706a', transition: 'color 0.15s ease' }}
+                      style={{ color: exactMatch ? 'var(--color-accent)' : 'var(--color-text-muted)', transition: 'color 0.15s ease' }}
                     >
                       <path d="M3 21c3 0 7-1 7-8V5c0-1.25-.756-2.017-2-2H4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V21z" />
                       <path d="M15 21c3 0 7-1 7-8V5c0-1.25-.757-2.017-2-2h-4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2h.75c0 2.25.25 4-2.75 4v3z" />
                     </svg>
-                    <span style={{ fontSize: 11, fontWeight: 600, color: exactMatch ? '#4db8a4' : '#5f706a', transition: 'color 0.15s ease', letterSpacing: '0.01em' }}>
+                    <span style={{ fontSize: 11, fontWeight: 600, color: exactMatch ? 'var(--color-accent)' : 'var(--color-text-muted)', transition: 'color 0.15s ease', letterSpacing: '0.01em' }}>
                       Exact
                     </span>
                   </button>
 
                   {/* Divider */}
-                  <div style={{ width: 1, height: 20, background: 'rgba(255,255,255,0.06)' }} />
+                  <div style={{ width: 1, height: 20, background: 'var(--color-border)' }} />
 
                   {/* Search button */}
                   <button
@@ -231,9 +231,9 @@ export default function SearchPage() {
                     disabled={loading}
                     style={{
                       padding: '7px 18px', borderRadius: 6,
-                      background: '#4db8a4', border: 'none', cursor: 'pointer',
+                      background: 'var(--color-accent)', border: 'none', cursor: 'pointer',
                       fontFamily: 'inherit', fontSize: 13, fontWeight: 600,
-                      color: '#0b0e0d', letterSpacing: '0.01em',
+                      color: 'var(--color-text-on-dark)', letterSpacing: '0.01em',
                       transition: 'all 0.15s ease',
                       opacity: loading ? 0.5 : 1,
                     }}
@@ -273,10 +273,10 @@ export default function SearchPage() {
                   <button
                     key={term}
                     onClick={() => handleSearch(term)}
-                    className="px-3.5 py-2 rounded-lg text-[13px] text-text-secondary hover:text-white hover:border-white/10 transition-all duration-200 cursor-pointer"
+                    className="px-3.5 py-2 rounded-lg text-[13px] text-text-secondary hover:text-text-primary transition-all duration-200 cursor-pointer"
                     style={{
-                      background: 'rgba(255,255,255,0.04)',
-                      border: '1px solid rgba(255,255,255,0.06)',
+                      background: 'var(--color-overlay-subtle)',
+                      border: '1px solid var(--color-border)',
                     }}
                   >
                     {term}
@@ -284,35 +284,6 @@ export default function SearchPage() {
                 ))}
               </div>
 
-              {/* AI Teaser */}
-              <div
-                className="flex items-center gap-6 rounded-xl py-5 px-7 relative overflow-hidden"
-                style={{
-                  background: 'rgba(200,164,78,0.04)',
-                  borderLeft: '3px solid var(--color-accent-gold)',
-                  border: '1px solid rgba(200,164,78,0.12)',
-                  borderLeftWidth: 3,
-                  borderLeftColor: 'var(--color-accent-gold)',
-                }}
-              >
-                <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-1.5">
-                    <Sparkles size={15} style={{ color: 'var(--color-accent-gold)' }} />
-                    <h3 className="font-display text-[16px] font-medium text-white">AI-Powered Search</h3>
-                  </div>
-                  <p className="text-text-secondary text-[13px] leading-relaxed">
-                    Ask questions in plain English:
-                    <span className="italic" style={{ color: 'var(--color-accent-gold)' }}> "What are the FDA's requirements for biosimilar interchangeability?"</span>
-                    — and get a synthesized answer with citations.
-                  </p>
-                </div>
-                <span
-                  className="text-[9px] font-bold tracking-[0.12em] uppercase px-3 py-1 rounded shrink-0"
-                  style={{ color: 'var(--color-accent-gold)', background: 'rgba(200,164,78,0.12)', border: '1px solid rgba(200,164,78,0.25)' }}
-                >
-                  Coming Soon
-                </span>
-              </div>
             </motion.div>
           )}
 
@@ -422,7 +393,7 @@ export default function SearchPage() {
                           borderRadius: 8,
                           marginBottom: 4,
                           cursor: 'pointer',
-                          border: isSelected ? '1px solid rgba(255,255,255,0.07)' : '1px solid transparent',
+                          border: isSelected ? '1px solid var(--color-border-mid)' : '1px solid transparent',
                           background: isSelected ? 'var(--color-bg-elevated)' : 'transparent',
                           transition: 'all 0.12s ease',
                           position: 'relative',
@@ -448,7 +419,7 @@ export default function SearchPage() {
                           />
                           <span style={{
                             fontSize: 13, fontWeight: 600,
-                            color: isSelected ? '#fff' : 'var(--color-text-secondary)',
+                            color: isSelected ? 'var(--color-text-primary)' : 'var(--color-text-secondary)',
                           }}>
                             {doc.name}
                           </span>

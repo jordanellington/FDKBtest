@@ -630,7 +630,7 @@ app.post('/api/chat', requireAuth, async (req, res) => {
   if (useRag) {
     try {
       res.write(`data: ${JSON.stringify({ type: 'status', message: 'Building document index...' })}\n\n`);
-      await getOrBuildCache(doc.id, doc.modified || '', extractedText, bedrockClient);
+      await getOrBuildCache(doc.id, doc.modified || '', extractedText, bedrockClient, doc.name);
 
       const latestQuestion = messages[messages.length - 1]?.content || '';
       res.write(`data: ${JSON.stringify({ type: 'status', message: 'Searching document...' })}\n\n`);

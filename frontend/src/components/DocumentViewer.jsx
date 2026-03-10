@@ -204,7 +204,7 @@ function PdfViewer({ fileUrl, searchQuery }) {
   );
 }
 
-export default function DocumentViewer({ document: doc, searchQuery, onClose }) {
+export default function DocumentViewer({ document: doc, searchQuery, onClose, fillContainer }) {
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
 
@@ -228,7 +228,12 @@ export default function DocumentViewer({ document: doc, searchQuery, onClose }) 
       exit={{ x: '100%', opacity: 0 }}
       transition={{ type: 'spring', damping: 30, stiffness: 300 }}
       className="document-viewer-panel flex flex-col h-full"
-      style={{
+      style={fillContainer ? {
+        width: '100%',
+        height: '100%',
+        background: 'var(--color-bg-secondary)',
+        borderLeft: 'none',
+      } : {
         width: chatOpen ? '70vw' : 728,
         maxWidth: chatOpen ? '75%' : '50%',
         minWidth: 340,

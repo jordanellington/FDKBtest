@@ -520,20 +520,20 @@ function MessageBubble({ msg, onOpenDoc }) {
           <span style={{ color: 'var(--color-text-muted)', fontStyle: 'italic', fontSize: 13 }}>{msg.content}</span>
         ) : msg.content ? (
           <div className="chat-markdown chat-markdown-lg">
-            <Markdown components={{
+            <Markdown
+              urlTransform={(url) => url}
+              components={{
               a: ({ href, children }) => {
                 if (href?.startsWith('#cite-')) {
-                  const match = href.match(/^#cite-(.+)-(\d+)$/);
+                  const match = href.match(/^#cite-(.+)-\d+$/);
                   if (match) {
                     const docName = decodeURIComponent(match[1]);
-                    const page = match[2];
                     const source = msg.sources?.find(s =>
                       s.name === docName || s.name?.startsWith(docName.replace(/\.PDF$/i, ''))
                     );
                     if (source) {
                       const label = source.displayTitle && source.displayTitle !== source.name
                         ? source.displayTitle : docName;
-                      const short = label.length > 40 ? label.slice(0, 37) + '...' : label;
                       const pub = source.publicationTitle;
                       const date = formatDate(source.publicationDate);
                       const meta = [pub, date].filter(Boolean).join(' · ');
@@ -550,9 +550,9 @@ function MessageBubble({ msg, onOpenDoc }) {
                             textDecorationStyle: 'dotted',
                             textUnderlineOffset: 2,
                           }}
-                          title={`${label}${meta ? ' — ' + meta : ''} (p.${page})`}
+                          title={`${label}${meta ? ' — ' + meta : ''}`}
                         >
-                          {short}{meta ? ` · ${meta}` : ''} p.{page}
+                          {children}
                         </span>
                       );
                     }

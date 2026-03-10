@@ -289,7 +289,7 @@ export default function ChatPage() {
               marginTop: 8,
               fontFamily: 'var(--font-body)',
             }}>
-              AI can make mistakes. Please double-check responses.
+              Private AI for Covington &amp; Burling LLP. Conversations are confidential. Always verify responses.
             </p>
           </div>
         </div>

@@ -915,20 +915,24 @@ app.post('/api/rag/build-index', requireAuth, async (req, res) => {
         console.log(`[rag-build] ${doc.name} response: ${pdfResp.status} ${pdfResp.headers.get('content-type')}`);
         if (!pdfResp.ok) throw new Error(`Fetch failed: ${pdfResp.status}`);
         const pdfBuffer = Buffer.from(await pdfResp.arrayBuffer());
+        console.log(`[rag-build] ${doc.name} downloaded ${(pdfBuffer.byteLength / 1024).toFixed(0)}KB, extracting...`);
 
         const { stdout: text } = await execFileAsync('python3', [scriptPath], {
           input: pdfBuffer,
           maxBuffer: 50 * 1024 * 1024,
-          timeout: 60000,
+          timeout: 120000,
           encoding: 'utf-8',
         });
+        console.log(`[rag-build] ${doc.name} extracted ${text?.length || 0} chars`);
 
         if (!text || text.trim().length < 50) {
           return { status: 'empty' };
         }
 
         const chunks = chunkDocument(text);
+        console.log(`[rag-build] ${doc.name} chunked into ${chunks.length}, embedding...`);
         const embeddings = await embedChunks(chunks, bedrockClient);
+        console.log(`[rag-build] ${doc.name} done`);
         const modifiedAt = doc.publicationDate || 'unknown';
         saveToDisk(doc.nodeId, modifiedAt, { chunks, embeddings, cachedAt: Date.now() });
 

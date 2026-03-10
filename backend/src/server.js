@@ -6,7 +6,7 @@ import { fileURLToPath } from 'url';
 import path from 'path';
 
 /** Spawn python and stream pdfBuffer via stdin (avoids pipe deadlock with large inputs). */
-function extractTextFromPdf(pdfBuffer, scriptPath, timeout = 120000) {
+function extractTextFromPdf(pdfBuffer, scriptPath, timeout = 300000) {
   return new Promise((resolve, reject) => {
     const proc = spawn('python3', [scriptPath], { timeout });
     const chunks = [];
@@ -603,6 +603,7 @@ app.post('/api/chat', requireAuth, async (req, res) => {
   // Skip PDF fetch if RAG cache already has this document
   if (doc?.id && !cachedAlready) {
     try {
+      res.write(`data: ${JSON.stringify({ type: 'status', message: 'Downloading document...' })}\n\n`);
       const pdfResp = await alfrescoFetch(
         `${ALFRESCO_API}/alfresco/versions/1/nodes/${doc.id}/content`,
         req.session
@@ -611,6 +612,8 @@ app.post('/api/chat', requireAuth, async (req, res) => {
         const buffer = Buffer.from(await pdfResp.arrayBuffer());
         console.log(`[chat] Fetched PDF for ${doc.name}: ${(buffer.byteLength / 1024 / 1024).toFixed(1)}MB`);
 
+        const pageInfo = pageCount ? ` (${pageCount} pages)` : '';
+        res.write(`data: ${JSON.stringify({ type: 'status', message: `Extracting text${pageInfo}...` })}\n\n`);
         const scriptPath = path.join(__dirname, '../scripts/extract_text.py');
         extractedText = await extractTextFromPdf(buffer, scriptPath);
         console.log(`[chat] Extracted ${extractedText.length} chars of text from ${doc.name}`);

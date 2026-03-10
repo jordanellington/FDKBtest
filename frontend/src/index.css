@@ -437,6 +437,7 @@ html.light .rpv-dark-theme .rpv-core__page-layer { box-shadow: 0 2px 8px rgba(0,
 }
 
 /* Full-page chat markdown — larger sizes for ChatPage */
+.chat-markdown-lg { font-family: var(--font-body); }
 .chat-markdown-lg p { margin: 0 0 12px; line-height: 1.7; }
 .chat-markdown-lg p:last-child { margin-bottom: 0; }
 .chat-markdown-lg strong { color: var(--color-text-primary); font-weight: 600; }

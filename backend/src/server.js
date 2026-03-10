@@ -754,11 +754,9 @@ app.post('/api/chat/fdkb', requireAuth, async (req, res) => {
       resolvedNodeIds = cccResults
         .filter(d => !d.error && d.name.startsWith(folder))
         .map(d => d.nodeId);
-      console.log(`[fdkb-chat] Folder filter "${folder}" → ${resolvedNodeIds.length} documents`);
     }
 
     const chunks = await retrieveAcrossDocs(latestQuestion, bedrockClient, cccResults, { nodeIds: resolvedNodeIds });
-    console.log(`[fdkb-chat] Retrieved ${chunks.length} chunks from corpus`);
 
     // Build source documents list (deduplicated, ordered by best score)
     const sourcesMap = new Map();
@@ -772,6 +770,7 @@ app.post('/api/chat/fdkb', requireAuth, async (req, res) => {
           publicationTitle: cccRecord?.publicationTitle || null,
           publisher: cccRecord?.publisher || null,
           distroLevel: cccRecord?.cccDistroLevel || null,
+          publicationDate: cccRecord?.publicationDate || null,
           page: chunk.page,
           score: chunk.score,
         });
@@ -809,7 +808,6 @@ CITATION RULES:
     ];
 
     const selectedModel = resolveModelId(model);
-    console.log(`[fdkb-chat] Using model: ${selectedModel}`);
 
     const command = new InvokeModelWithResponseStreamCommand({
       modelId: selectedModel,
@@ -886,7 +884,6 @@ app.post('/api/rag/build-index', requireAuth, async (req, res) => {
       try { unlinkSync(path.join(CACHE_DIR, f)); } catch {}
     }
     send({ type: 'status', message: `Cleared ${files.length} cached files` });
-    console.log(`[rag-build] Cleared ${files.length} cache files`);
   }
 
   const docs = cccResults.filter(d => !d.error);
@@ -897,7 +894,6 @@ app.post('/api/rag/build-index', requireAuth, async (req, res) => {
   const BATCH_SIZE = 5;
 
   try {
-    console.log(`[rag-build] Starting build for ${docs.length} documents, session keys: ${Object.keys(session).join(', ')}`);
     send({ type: 'status', message: `Starting index build for ${docs.length} documents...` });
 
     // Filter out already-cached docs first
@@ -926,29 +922,24 @@ app.post('/api/rag/build-index', requireAuth, async (req, res) => {
       send({ type: 'progress', current, total: docs.length, name: doc.name, indexed, skipped, errors });
 
       try {
-        console.log(`[rag-build] [${current}/${docs.length}] ${doc.name} — fetching...`);
         const pdfResp = await alfrescoFetch(
           `${SHARE_API_PROXY}/alfresco/versions/1/nodes/${doc.nodeId}/content`,
           session
         );
         if (!pdfResp.ok) throw new Error(`Fetch failed: ${pdfResp.status}`);
         const pdfBuffer = Buffer.from(await pdfResp.arrayBuffer());
-        console.log(`[rag-build] ${doc.name} — ${(pdfBuffer.byteLength / 1024).toFixed(0)}KB, extracting...`);
 
         const text = await extractTextFromPdf(pdfBuffer, scriptPath);
 
         if (!text || text.trim().length < 50) {
-          console.log(`[rag-build] ${doc.name} — no text extracted`);
           errors++;
           continue;
         }
 
         const chunks = chunkDocument(text);
-        console.log(`[rag-build] ${doc.name} — ${text.length} chars, ${chunks.length} chunks, embedding...`);
         const embeddings = await embedChunks(chunks, bedrockClient);
         const modifiedAt = doc.publicationDate || 'unknown';
         saveToDisk(doc.nodeId, modifiedAt, { chunks, embeddings, cachedAt: Date.now() });
-        console.log(`[rag-build] ${doc.name} — done`);
         indexed++;
       } catch (err) {
         console.error(`[rag-build] Error on ${doc.name}:`, err.message);

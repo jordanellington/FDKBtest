@@ -10,6 +10,19 @@ const MODELS = [
   { id: 'opus', label: 'Opus 4.6' },
 ];
 
+// Convert [12.1.0083.PDF, p.2] plain-text citations into markdown links
+const CITE_RE = /\[([^\]]+?\.PDF),\s*p\.?\s*(\d+)\]/gi;
+function processCitations(text) {
+  return text.replace(CITE_RE, (_, name, page) => `[${name}, p.${page}](cite:${name}:${page})`);
+}
+
+function formatDate(iso) {
+  if (!iso) return null;
+  const d = new Date(iso);
+  if (isNaN(d)) return null;
+  return d.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+}
+
 const SUGGESTIONS = [
   'What cloning legislation was proposed in 2001?',
   'Which publications cover FDA\'s stance on biotech?',
@@ -242,7 +255,7 @@ export default function ChatPage() {
 
       {/* Document viewer pane */}
       {viewerDoc && (
-        <div style={{ width: '50%', maxWidth: 700, minWidth: 400, borderLeft: '1px solid var(--color-border)' }}>
+        <div style={{ width: '50%', minWidth: 400, borderLeft: '1px solid var(--color-border)' }}>
           <DocumentViewer
             document={viewerDoc}
             onClose={() => setViewerDoc(null)}
@@ -496,7 +509,43 @@ function MessageBubble({ msg, onOpenDoc }) {
           <span style={{ color: 'var(--color-text-muted)', fontStyle: 'italic', fontSize: 13 }}>{msg.content}</span>
         ) : msg.content ? (
           <div className="chat-markdown chat-markdown-lg">
-            <Markdown>{msg.content}</Markdown>
+            <Markdown components={{
+              a: ({ href, children }) => {
+                if (href?.startsWith('cite:')) {
+                  const [, docName, page] = href.split(':');
+                  const source = msg.sources?.find(s => s.name === docName);
+                  if (source) {
+                    const label = source.displayTitle && source.displayTitle !== source.name
+                      ? source.displayTitle : docName;
+                    const short = label.length > 40 ? label.slice(0, 37) + '...' : label;
+                    const pub = source.publicationTitle;
+                    const date = formatDate(source.publicationDate);
+                    const meta = [pub, date].filter(Boolean).join(' · ');
+                    return (
+                      <span
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => onOpenDoc(source)}
+                        onKeyDown={(e) => e.key === 'Enter' && onOpenDoc(source)}
+                        style={{
+                          color: 'var(--color-accent)',
+                          cursor: 'pointer',
+                          textDecoration: 'underline',
+                          textDecorationStyle: 'dotted',
+                          textUnderlineOffset: 2,
+                        }}
+                        title={`${label}${meta ? ' — ' + meta : ''} (p.${page})`}
+                      >
+                        {short}{meta ? ` · ${meta}` : ''} p.{page}
+                      </span>
+                    );
+                  }
+                }
+                return <a href={href}>{children}</a>;
+              },
+            }}>
+              {processCitations(msg.content)}
+            </Markdown>
           </div>
         ) : (
           msg.streaming && <span className="animate-pulse" style={{ color: 'var(--color-accent-gold)' }}>...</span>
@@ -523,6 +572,9 @@ function SourceCard({ source, onClick }) {
     ? source.displayTitle
     : source.name;
   const displayTitle = title.length > 50 ? title.slice(0, 47) + '...' : title;
+  const pub = source.publicationTitle;
+  const date = formatDate(source.publicationDate);
+  const meta = [pub, date].filter(Boolean).join(' · ');
 
   return (
     <button
@@ -530,24 +582,32 @@ function SourceCard({ source, onClick }) {
       style={{
         display: 'inline-flex',
         alignItems: 'center',
-        gap: 5,
-        padding: '3px 8px',
+        gap: 6,
+        padding: '4px 10px',
         background: 'var(--color-bg-elevated)',
         border: '1px solid var(--color-border-mid)',
-        borderRadius: 5,
+        borderRadius: 6,
         cursor: 'pointer',
         textAlign: 'left',
         transition: 'border-color 0.15s',
         fontFamily: 'var(--font-body)',
-        fontSize: 11,
-        color: 'var(--color-text-secondary)',
         textDecoration: 'none',
+        maxWidth: 360,
       }}
-      onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--color-accent)'; e.currentTarget.style.color = 'var(--color-text-primary)'; }}
-      onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--color-border-mid)'; e.currentTarget.style.color = 'var(--color-text-secondary)'; }}
+      onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--color-accent)'; }}
+      onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--color-border-mid)'; }}
     >
-      <FileText size={10} style={{ color: 'var(--color-text-muted)', flexShrink: 0 }} />
-      {displayTitle}
+      <FileText size={12} style={{ color: 'var(--color-accent)', flexShrink: 0 }} />
+      <span style={{ overflow: 'hidden', minWidth: 0 }}>
+        <span style={{ display: 'block', fontSize: 11, color: 'var(--color-text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+          {displayTitle}
+        </span>
+        {meta && (
+          <span style={{ display: 'block', fontSize: 10, color: 'var(--color-text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            {meta}
+          </span>
+        )}
+      </span>
     </button>
   );
 }

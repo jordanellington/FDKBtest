@@ -513,8 +513,13 @@ function MessageBubble({ msg, onOpenDoc }) {
             <Markdown components={{
               a: ({ href, children }) => {
                 if (href?.startsWith('cite:')) {
-                  const [, docName, page] = href.split(':');
-                  const source = msg.sources?.find(s => s.name === docName);
+                  const parts = href.slice(5); // remove "cite:"
+                  const lastColon = parts.lastIndexOf(':');
+                  const docName = lastColon > 0 ? parts.slice(0, lastColon) : parts;
+                  const page = lastColon > 0 ? parts.slice(lastColon + 1) : '';
+                  const source = msg.sources?.find(s =>
+                    s.name === docName || s.name?.startsWith(docName.replace(/\.PDF$/i, ''))
+                  );
                   if (source) {
                     const label = source.displayTitle && source.displayTitle !== source.name
                       ? source.displayTitle : docName;
@@ -541,8 +546,10 @@ function MessageBubble({ msg, onOpenDoc }) {
                       </span>
                     );
                   }
+                  // Source not found — render as non-navigating text
+                  return <span style={{ color: 'var(--color-text-secondary)' }}>{children}</span>;
                 }
-                return <a href={href}>{children}</a>;
+                return <a href={href} target="_blank" rel="noopener noreferrer">{children}</a>;
               },
             }}>
               {processCitations(msg.content)}

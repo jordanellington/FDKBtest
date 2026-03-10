@@ -10,10 +10,20 @@ const MODELS = [
   { id: 'opus', label: 'Opus 4.6' },
 ];
 
-// Convert [12.1.0083.PDF, p.2] plain-text citations into markdown links
-const CITE_RE = /\[([^\]]+?\.PDF),\s*p\.?\s*(\d+)\]/gi;
+// Convert citations into markdown links — handles both bracketed and bare forms:
+// [12.1.0083.PDF, p.2] or 12.1.0083.PDF, p.2
+const CITE_BRACKET_RE = /\[([^\]]+?\.PDF),\s*p\.?\s*(\d+)\]/gi;
+const CITE_BARE_RE = /(?<!\[)(\d+\.\d+\.\d+\.PDF),\s*p\.?\s*(\d+)/gi;
 function processCitations(text) {
-  return text.replace(CITE_RE, (_, name, page) => `[${name}, p.${page}](cite:${name}:${page})`);
+  // First convert bracketed, then bare (avoiding already-converted markdown links)
+  let result = text.replace(CITE_BRACKET_RE, (_, name, page) => `[${name}, p.${page}](cite:${name}:${page})`);
+  result = result.replace(CITE_BARE_RE, (match, name, page, offset) => {
+    // Skip if already inside a markdown link (preceded by `](`)
+    const before = result.slice(Math.max(0, offset - 2), offset);
+    if (before.includes('](') || before.includes('](cite:')) return match;
+    return `[${name}, p.${page}](cite:${name}:${page})`;
+  });
+  return result;
 }
 
 function formatDate(iso) {

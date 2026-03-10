@@ -611,15 +611,8 @@ app.post('/api/chat', requireAuth, async (req, res) => {
         const buffer = Buffer.from(await pdfResp.arrayBuffer());
         console.log(`[chat] Fetched PDF for ${doc.name}: ${(buffer.byteLength / 1024 / 1024).toFixed(1)}MB`);
 
-        extractedText = await new Promise((resolve, reject) => {
-          const scriptPath = path.join(__dirname, '../scripts/extract_text.py');
-          const proc = execFile('python3', [scriptPath], { maxBuffer: 50 * 1024 * 1024 }, (err, stdout) => {
-            if (err) return reject(err);
-            resolve(stdout);
-          });
-          proc.stdin.write(buffer);
-          proc.stdin.end();
-        });
+        const scriptPath = path.join(__dirname, '../scripts/extract_text.py');
+        extractedText = await extractTextFromPdf(buffer, scriptPath);
         console.log(`[chat] Extracted ${extractedText.length} chars of text from ${doc.name}`);
       }
     } catch (err) {

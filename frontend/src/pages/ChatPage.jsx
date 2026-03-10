@@ -10,20 +10,59 @@ const MODELS = [
   { id: 'opus', label: 'Opus 4.6' },
 ];
 
-// Convert citations into markdown links — handles both bracketed and bare forms:
-// [12.1.0083.PDF, p.2] or 12.1.0083.PDF, p.2
-// Uses #cite- hash links which react-markdown won't sanitize/encode
-const CITE_BRACKET_RE = /\[([^\]]+?\.PDF),\s*p\.?\s*(\d+)\]/gi;
-const CITE_BARE_RE = /(?<!\[|\()(\d+\.\d+\.\d+\.PDF),\s*p\.?\s*(\d+)/gi;
-function processCitations(text) {
-  let result = text.replace(CITE_BRACKET_RE, (_, name, page) => `[${name}, p.${page}](#cite-${encodeURIComponent(name)}-${page})`);
-  result = result.replace(CITE_BARE_RE, (match, name, page, offset) => {
-    // Skip if already inside a markdown link
-    const before = result.slice(Math.max(0, offset - 5), offset);
-    if (before.includes('](#cite-')) return match;
-    return `[${name}, p.${page}](#cite-${encodeURIComponent(name)}-${page})`;
-  });
-  return result;
+// Strip brackets from citations so markdown doesn't try to parse them as links.
+// The CitationLinker component handles making them clickable after rendering.
+function stripCitationBrackets(text) {
+  return text.replace(/\[([^\]]+?\.PDF),\s*p\.?\s*(\d+)\]/gi, '$1, p.$2');
+}
+
+// Walk React children, find citation patterns in text nodes, replace with clickable spans.
+const CITE_TEXT_RE = /(\d[\d.]+\.PDF,\s*p\.?\s*\d+)/gi;
+
+function CitationLinker({ children, sources, onOpenDoc }) {
+  function processNode(node) {
+    if (typeof node === 'string') {
+      const parts = node.split(CITE_TEXT_RE);
+      if (parts.length === 1) return node;
+      return parts.map((part, i) => {
+        if (i % 2 === 0) return part;
+        // This is a citation match — extract name and page
+        const m = part.match(/^(.+?\.PDF),\s*p\.?\s*\d+$/i);
+        if (!m) return part;
+        const docName = m[1];
+        const source = sources?.find(s =>
+          s.name === docName || s.name?.startsWith(docName.replace(/\.PDF$/i, ''))
+        );
+        if (!source) return part;
+        return (
+          <span
+            key={i}
+            role="button"
+            tabIndex={0}
+            onClick={() => onOpenDoc(source)}
+            onKeyDown={(e) => e.key === 'Enter' && onOpenDoc(source)}
+            style={{
+              color: 'var(--color-accent)',
+              cursor: 'pointer',
+              textDecoration: 'underline',
+              textDecorationStyle: 'dotted',
+              textUnderlineOffset: 2,
+            }}
+            title={source.displayTitle || docName}
+          >
+            {part}
+          </span>
+        );
+      });
+    }
+    if (!node?.props?.children) return node;
+    const newChildren = Array.isArray(node.props.children)
+      ? node.props.children.map(processNode)
+      : processNode(node.props.children);
+    return { ...node, props: { ...node.props, children: newChildren } };
+  }
+  const processed = Array.isArray(children) ? children.map(processNode) : processNode(children);
+  return <>{processed}</>;
 }
 
 function formatDate(iso) {
@@ -520,51 +559,11 @@ function MessageBubble({ msg, onOpenDoc }) {
           <span style={{ color: 'var(--color-text-muted)', fontStyle: 'italic', fontSize: 13 }}>{msg.content}</span>
         ) : msg.content ? (
           <div className="chat-markdown chat-markdown-lg">
-            <Markdown
-              urlTransform={(url) => url}
-              components={{
-              a: ({ href, children }) => {
-                if (href?.startsWith('#cite-')) {
-                  const match = href.match(/^#cite-(.+)-\d+$/);
-                  if (match) {
-                    const docName = decodeURIComponent(match[1]);
-                    const source = msg.sources?.find(s =>
-                      s.name === docName || s.name?.startsWith(docName.replace(/\.PDF$/i, ''))
-                    );
-                    if (source) {
-                      const label = source.displayTitle && source.displayTitle !== source.name
-                        ? source.displayTitle : docName;
-                      const pub = source.publicationTitle;
-                      const date = formatDate(source.publicationDate);
-                      const meta = [pub, date].filter(Boolean).join(' · ');
-                      return (
-                        <span
-                          role="button"
-                          tabIndex={0}
-                          onClick={() => onOpenDoc(source)}
-                          onKeyDown={(e) => e.key === 'Enter' && onOpenDoc(source)}
-                          style={{
-                            color: 'var(--color-accent)',
-                            cursor: 'pointer',
-                            textDecoration: 'underline',
-                            textDecorationStyle: 'dotted',
-                            textUnderlineOffset: 2,
-                          }}
-                          title={`${label}${meta ? ' — ' + meta : ''}`}
-                        >
-                          {children}
-                        </span>
-                      );
-                    }
-                  }
-                  // Source not found — render as plain text, never navigate
-                  return <span style={{ color: 'var(--color-text-secondary)' }}>{children}</span>;
-                }
-                return <a href={href} target="_blank" rel="noopener noreferrer">{children}</a>;
-              },
-            }}>
-              {processCitations(msg.content)}
-            </Markdown>
+            <CitationLinker sources={msg.sources} onOpenDoc={onOpenDoc}>
+              <Markdown>
+                {stripCitationBrackets(msg.content)}
+              </Markdown>
+            </CitationLinker>
           </div>
         ) : (
           msg.streaming && <span className="animate-pulse" style={{ color: 'var(--color-accent-gold)' }}>...</span>

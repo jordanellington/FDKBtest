@@ -7,3 +7,6 @@ dist/
 .playwright-mcp/
 .claude/
 data/
+!backend/data/
+backend/data/*
+!backend/data/ccc-pilot-results.json

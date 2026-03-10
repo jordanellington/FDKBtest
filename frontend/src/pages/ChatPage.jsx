@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback, cloneElement, isValidElement, Children } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { Send, ChevronDown, ChevronUp, FileText, Sparkles, Database, Loader2 } from 'lucide-react';
 import Markdown from 'react-markdown';
 import { chatFdkbStream, getRagStatus, buildRagIndex } from '../lib/api';
@@ -10,58 +10,52 @@ const MODELS = [
   { id: 'opus', label: 'Opus 4.6' },
 ];
 
-// Strip brackets from citations so markdown doesn't try to parse them as links.
-// The CitationLinker component handles making them clickable after rendering.
+// Strip brackets from citations so markdown renders them as plain text.
 function stripCitationBrackets(text) {
   return text.replace(/\[([^\]]+?\.PDF),\s*p\.?\s*(\d+)\]/gi, '$1, p.$2');
 }
 
-// Walk React children, find citation patterns in text nodes, replace with clickable spans.
+// Process direct children of a React element: find citation patterns in strings,
+// replace with clickable spans. Passes non-string children through unchanged.
 const CITE_TEXT_RE = /(\d[\d.]+\.PDF,\s*p\.?\s*\d+)/gi;
 
-function CitationLinker({ children, sources, onOpenDoc }) {
-  function processNode(node) {
-    if (typeof node === 'string') {
-      const parts = node.split(CITE_TEXT_RE);
-      if (parts.length === 1) return node;
-      return parts.map((part, i) => {
-        if (i % 2 === 0) return part;
-        // This is a citation match — extract name and page
-        const m = part.match(/^(.+?\.PDF),\s*p\.?\s*\d+$/i);
-        if (!m) return part;
-        const docName = m[1];
-        const source = sources?.find(s =>
-          s.name === docName || s.name?.startsWith(docName.replace(/\.PDF$/i, ''))
-        );
-        if (!source) return part;
-        return (
-          <span
-            key={i}
-            role="button"
-            tabIndex={0}
-            onClick={() => onOpenDoc(source)}
-            onKeyDown={(e) => e.key === 'Enter' && onOpenDoc(source)}
-            style={{
-              color: 'var(--color-accent)',
-              cursor: 'pointer',
-              textDecoration: 'underline',
-              textDecorationStyle: 'dotted',
-              textUnderlineOffset: 2,
-            }}
-            title={source.displayTitle || docName}
-          >
-            {part}
-          </span>
-        );
-      });
-    }
-    if (!isValidElement(node)) return node;
-    const nodeChildren = node.props.children;
-    if (!nodeChildren) return node;
-    const newChildren = Children.map(nodeChildren, processNode);
-    return cloneElement(node, {}, ...newChildren);
-  }
-  return <>{Children.map(children, processNode)}</>;
+function linkCitations(children, sources, onOpenDoc) {
+  if (!children) return children;
+  const arr = Array.isArray(children) ? children : [children];
+  return arr.flatMap((child, ci) => {
+    if (typeof child !== 'string') return child;
+    const parts = child.split(CITE_TEXT_RE);
+    if (parts.length === 1) return child;
+    return parts.map((part, i) => {
+      if (i % 2 === 0) return part;
+      const m = part.match(/^(.+?\.PDF),\s*p\.?\s*\d+$/i);
+      if (!m) return part;
+      const docName = m[1];
+      const source = sources?.find(s =>
+        s.name === docName || s.name?.startsWith(docName.replace(/\.PDF$/i, ''))
+      );
+      if (!source) return part;
+      return (
+        <span
+          key={`${ci}-${i}`}
+          role="button"
+          tabIndex={0}
+          onClick={() => onOpenDoc(source)}
+          onKeyDown={(e) => e.key === 'Enter' && onOpenDoc(source)}
+          style={{
+            color: 'var(--color-accent)',
+            cursor: 'pointer',
+            textDecoration: 'underline',
+            textDecorationStyle: 'dotted',
+            textUnderlineOffset: 2,
+          }}
+          title={source.displayTitle || docName}
+        >
+          {part}
+        </span>
+      );
+    });
+  });
 }
 
 function formatDate(iso) {
@@ -558,11 +552,13 @@ function MessageBubble({ msg, onOpenDoc }) {
           <span style={{ color: 'var(--color-text-muted)', fontStyle: 'italic', fontSize: 13 }}>{msg.content}</span>
         ) : msg.content ? (
           <div className="chat-markdown chat-markdown-lg">
-            <CitationLinker sources={msg.sources} onOpenDoc={onOpenDoc}>
-              <Markdown>
-                {stripCitationBrackets(msg.content)}
-              </Markdown>
-            </CitationLinker>
+            <Markdown components={{
+              p: ({ children }) => <p>{linkCitations(children, msg.sources, onOpenDoc)}</p>,
+              li: ({ children }) => <li>{linkCitations(children, msg.sources, onOpenDoc)}</li>,
+              td: ({ children }) => <td>{linkCitations(children, msg.sources, onOpenDoc)}</td>,
+            }}>
+              {stripCitationBrackets(msg.content)}
+            </Markdown>
           </div>
         ) : (
           msg.streaming && <span className="animate-pulse" style={{ color: 'var(--color-accent-gold)' }}>...</span>

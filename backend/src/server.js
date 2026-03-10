@@ -881,6 +881,7 @@ app.post('/api/rag/build-index', requireAuth, async (req, res) => {
   const BATCH_SIZE = 5;
 
   try {
+    console.log(`[rag-build] Starting build for ${docs.length} documents, session keys: ${Object.keys(session).join(', ')}`);
     send({ type: 'status', message: `Starting index build for ${docs.length} documents...` });
 
     // Filter out already-cached docs first
@@ -908,10 +909,10 @@ app.post('/api/rag/build-index', requireAuth, async (req, res) => {
       send({ type: 'progress', current: skipped + indexed + errors + i + 1, total: docs.length, name: batch.map(d => d.name).join(', '), indexed, skipped, errors });
 
       const results = await Promise.allSettled(batch.map(async (doc) => {
-        const pdfResp = await alfrescoFetch(
-          `${SHARE_API_PROXY}/alfresco/versions/1/nodes/${doc.nodeId}/content`,
-          session
-        );
+        const fetchUrl = `${SHARE_API_PROXY}/alfresco/versions/1/nodes/${doc.nodeId}/content`;
+        console.log(`[rag-build] Fetching ${doc.name} from ${fetchUrl}`);
+        const pdfResp = await alfrescoFetch(fetchUrl, session);
+        console.log(`[rag-build] ${doc.name} response: ${pdfResp.status} ${pdfResp.headers.get('content-type')}`);
         if (!pdfResp.ok) throw new Error(`Fetch failed: ${pdfResp.status}`);
         const pdfBuffer = Buffer.from(await pdfResp.arrayBuffer());
 

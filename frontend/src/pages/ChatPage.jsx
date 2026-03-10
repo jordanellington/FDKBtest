@@ -16,13 +16,6 @@ const SUGGESTIONS = [
   'Summarize the key regulatory developments',
 ];
 
-const BADGE_COLORS = {
-  'External Unrestricted': { dot: '#4db8a4' },
-  'Internal Only': { dot: '#c8a44e' },
-  'Internal + Client (with notice)': { dot: '#6ba3e8' },
-  'Not Covered': { dot: '#C75B5B' },
-};
-
 export default function ChatPage() {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
@@ -526,11 +519,10 @@ function MessageBubble({ msg, onOpenDoc }) {
 }
 
 function SourceCard({ source, onClick }) {
-  const badgeColor = BADGE_COLORS[source.distroLevel]?.dot || '#5f706a';
   const title = source.displayTitle && source.displayTitle !== source.name
     ? source.displayTitle
     : source.name;
-  const displayTitle = title.length > 60 ? title.slice(0, 57) + '...' : title;
+  const displayTitle = title.length > 50 ? title.slice(0, 47) + '...' : title;
 
   return (
     <button
@@ -538,32 +530,24 @@ function SourceCard({ source, onClick }) {
       style={{
         display: 'inline-flex',
         alignItems: 'center',
-        gap: 6,
-        padding: '5px 10px',
+        gap: 5,
+        padding: '3px 8px',
         background: 'var(--color-bg-elevated)',
         border: '1px solid var(--color-border-mid)',
-        borderRadius: 6,
+        borderRadius: 5,
         cursor: 'pointer',
         textAlign: 'left',
         transition: 'border-color 0.15s',
         fontFamily: 'var(--font-body)',
+        fontSize: 11,
+        color: 'var(--color-text-secondary)',
+        textDecoration: 'none',
       }}
-      onMouseEnter={(e) => e.currentTarget.style.borderColor = 'var(--color-border-strong)'}
-      onMouseLeave={(e) => e.currentTarget.style.borderColor = 'var(--color-border-mid)'}
+      onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--color-accent)'; e.currentTarget.style.color = 'var(--color-text-primary)'; }}
+      onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--color-border-mid)'; e.currentTarget.style.color = 'var(--color-text-secondary)'; }}
     >
-      <FileText size={12} style={{ color: 'var(--color-text-muted)', flexShrink: 0 }} />
-      <span style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>
-        {displayTitle}
-      </span>
-      {source.distroLevel && (
-        <div style={{
-          width: 6,
-          height: 6,
-          borderRadius: '50%',
-          background: badgeColor,
-          flexShrink: 0,
-        }} />
-      )}
+      <FileText size={10} style={{ color: 'var(--color-text-muted)', flexShrink: 0 }} />
+      {displayTitle}
     </button>
   );
 }

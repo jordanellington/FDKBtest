@@ -251,7 +251,7 @@ export default function ChatPage() {
       {viewerDoc && (
         <div style={{ width: '50%', maxWidth: 700, minWidth: 400, borderLeft: '1px solid var(--color-border)' }}>
           <DocumentViewer
-            file={viewerDoc}
+            document={viewerDoc}
             onClose={() => setViewerDoc(null)}
           />
         </div>
@@ -496,7 +496,7 @@ function MessageBubble({ msg, onOpenDoc }) {
       <div style={{
         fontSize: 14,
         lineHeight: 1.7,
-        color: msg.error ? 'var(--color-status-red)' : 'var(--color-text-secondary)',
+        color: msg.error ? 'var(--color-status-red)' : 'var(--color-text-primary)',
         fontFamily: 'var(--font-body)',
       }}>
         {msg.status ? (

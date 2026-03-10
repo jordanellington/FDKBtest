@@ -878,15 +878,15 @@ app.post('/api/rag/build-index', requireAuth, async (req, res) => {
   const SHARE_API_PROXY = `${ALFRESCO_BASE}/share/proxy/alfresco-api/-default-/public`;
 
   let indexed = 0, skipped = 0, errors = 0;
+  const BATCH_SIZE = 5;
 
   try {
     send({ type: 'status', message: `Starting index build for ${docs.length} documents...` });
 
-    for (let i = 0; i < docs.length; i++) {
-      const doc = docs[i];
+    // Filter out already-cached docs first
+    const toProcess = [];
+    for (const doc of docs) {
       const cachePath = getCachePath(doc.nodeId);
-
-      // Skip if already cached
       if (existsSync(cachePath)) {
         try {
           const data = JSON.parse(readFileSync(cachePath, 'utf8'));
@@ -896,11 +896,18 @@ app.post('/api/rag/build-index', requireAuth, async (req, res) => {
           }
         } catch {}
       }
+      toProcess.push(doc);
+    }
 
-      try {
-        send({ type: 'progress', current: i + 1, total: docs.length, name: doc.name, indexed, skipped, errors });
+    const scriptPath = path.join(__dirname, '../scripts/extract_text.py');
 
-        // Fetch PDF using user's Alfresco session via Share proxy
+    // Process in parallel batches
+    for (let i = 0; i < toProcess.length; i += BATCH_SIZE) {
+      const batch = toProcess.slice(i, i + BATCH_SIZE);
+
+      send({ type: 'progress', current: skipped + indexed + errors + i + 1, total: docs.length, name: batch.map(d => d.name).join(', '), indexed, skipped, errors });
+
+      const results = await Promise.allSettled(batch.map(async (doc) => {
         const pdfResp = await alfrescoFetch(
           `${SHARE_API_PROXY}/alfresco/versions/1/nodes/${doc.nodeId}/content`,
           session
@@ -908,8 +915,6 @@ app.post('/api/rag/build-index', requireAuth, async (req, res) => {
         if (!pdfResp.ok) throw new Error(`Fetch failed: ${pdfResp.status}`);
         const pdfBuffer = Buffer.from(await pdfResp.arrayBuffer());
 
-        // Extract text via pymupdf4llm
-        const scriptPath = path.join(__dirname, '../scripts/extract_text.py');
         const { stdout: text } = await execFileAsync('python3', [scriptPath], {
           input: pdfBuffer,
           maxBuffer: 50 * 1024 * 1024,
@@ -918,20 +923,26 @@ app.post('/api/rag/build-index', requireAuth, async (req, res) => {
         });
 
         if (!text || text.trim().length < 50) {
-          errors++;
-          continue;
+          return { status: 'empty' };
         }
 
-        // Chunk and embed
         const chunks = chunkDocument(text);
         const embeddings = await embedChunks(chunks, bedrockClient);
         const modifiedAt = doc.publicationDate || 'unknown';
         saveToDisk(doc.nodeId, modifiedAt, { chunks, embeddings, cachedAt: Date.now() });
 
-        indexed++;
-      } catch (err) {
-        console.error(`[rag-build] Error on ${doc.name}:`, err.message);
-        errors++;
+        return { status: 'ok' };
+      }));
+
+      for (let j = 0; j < results.length; j++) {
+        if (results[j].status === 'fulfilled' && results[j].value.status === 'ok') {
+          indexed++;
+        } else {
+          if (results[j].status === 'rejected') {
+            console.error(`[rag-build] Error on ${batch[j].name}:`, results[j].reason?.message);
+          }
+          errors++;
+        }
       }
     }
 

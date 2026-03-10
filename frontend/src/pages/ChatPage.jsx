@@ -12,16 +12,16 @@ const MODELS = [
 
 // Convert citations into markdown links — handles both bracketed and bare forms:
 // [12.1.0083.PDF, p.2] or 12.1.0083.PDF, p.2
+// Uses #cite- hash links which react-markdown won't sanitize/encode
 const CITE_BRACKET_RE = /\[([^\]]+?\.PDF),\s*p\.?\s*(\d+)\]/gi;
-const CITE_BARE_RE = /(?<!\[)(\d+\.\d+\.\d+\.PDF),\s*p\.?\s*(\d+)/gi;
+const CITE_BARE_RE = /(?<!\[|\()(\d+\.\d+\.\d+\.PDF),\s*p\.?\s*(\d+)/gi;
 function processCitations(text) {
-  // First convert bracketed, then bare (avoiding already-converted markdown links)
-  let result = text.replace(CITE_BRACKET_RE, (_, name, page) => `[${name}, p.${page}](cite:${name}:${page})`);
+  let result = text.replace(CITE_BRACKET_RE, (_, name, page) => `[${name}, p.${page}](#cite-${encodeURIComponent(name)}-${page})`);
   result = result.replace(CITE_BARE_RE, (match, name, page, offset) => {
-    // Skip if already inside a markdown link (preceded by `](`)
-    const before = result.slice(Math.max(0, offset - 2), offset);
-    if (before.includes('](') || before.includes('](cite:')) return match;
-    return `[${name}, p.${page}](cite:${name}:${page})`;
+    // Skip if already inside a markdown link
+    const before = result.slice(Math.max(0, offset - 5), offset);
+    if (before.includes('](#cite-')) return match;
+    return `[${name}, p.${page}](#cite-${encodeURIComponent(name)}-${page})`;
   });
   return result;
 }
@@ -522,41 +522,42 @@ function MessageBubble({ msg, onOpenDoc }) {
           <div className="chat-markdown chat-markdown-lg">
             <Markdown components={{
               a: ({ href, children }) => {
-                if (href?.startsWith('cite:')) {
-                  const parts = href.slice(5); // remove "cite:"
-                  const lastColon = parts.lastIndexOf(':');
-                  const docName = lastColon > 0 ? parts.slice(0, lastColon) : parts;
-                  const page = lastColon > 0 ? parts.slice(lastColon + 1) : '';
-                  const source = msg.sources?.find(s =>
-                    s.name === docName || s.name?.startsWith(docName.replace(/\.PDF$/i, ''))
-                  );
-                  if (source) {
-                    const label = source.displayTitle && source.displayTitle !== source.name
-                      ? source.displayTitle : docName;
-                    const short = label.length > 40 ? label.slice(0, 37) + '...' : label;
-                    const pub = source.publicationTitle;
-                    const date = formatDate(source.publicationDate);
-                    const meta = [pub, date].filter(Boolean).join(' · ');
-                    return (
-                      <span
-                        role="button"
-                        tabIndex={0}
-                        onClick={() => onOpenDoc(source)}
-                        onKeyDown={(e) => e.key === 'Enter' && onOpenDoc(source)}
-                        style={{
-                          color: 'var(--color-accent)',
-                          cursor: 'pointer',
-                          textDecoration: 'underline',
-                          textDecorationStyle: 'dotted',
-                          textUnderlineOffset: 2,
-                        }}
-                        title={`${label}${meta ? ' — ' + meta : ''} (p.${page})`}
-                      >
-                        {short}{meta ? ` · ${meta}` : ''} p.{page}
-                      </span>
+                if (href?.startsWith('#cite-')) {
+                  const match = href.match(/^#cite-(.+)-(\d+)$/);
+                  if (match) {
+                    const docName = decodeURIComponent(match[1]);
+                    const page = match[2];
+                    const source = msg.sources?.find(s =>
+                      s.name === docName || s.name?.startsWith(docName.replace(/\.PDF$/i, ''))
                     );
+                    if (source) {
+                      const label = source.displayTitle && source.displayTitle !== source.name
+                        ? source.displayTitle : docName;
+                      const short = label.length > 40 ? label.slice(0, 37) + '...' : label;
+                      const pub = source.publicationTitle;
+                      const date = formatDate(source.publicationDate);
+                      const meta = [pub, date].filter(Boolean).join(' · ');
+                      return (
+                        <span
+                          role="button"
+                          tabIndex={0}
+                          onClick={() => onOpenDoc(source)}
+                          onKeyDown={(e) => e.key === 'Enter' && onOpenDoc(source)}
+                          style={{
+                            color: 'var(--color-accent)',
+                            cursor: 'pointer',
+                            textDecoration: 'underline',
+                            textDecorationStyle: 'dotted',
+                            textUnderlineOffset: 2,
+                          }}
+                          title={`${label}${meta ? ' — ' + meta : ''} (p.${page})`}
+                        >
+                          {short}{meta ? ` · ${meta}` : ''} p.{page}
+                        </span>
+                      );
+                    }
                   }
-                  // Source not found — render as non-navigating text
+                  // Source not found — render as plain text, never navigate
                   return <span style={{ color: 'var(--color-text-secondary)' }}>{children}</span>;
                 }
                 return <a href={href} target="_blank" rel="noopener noreferrer">{children}</a>;

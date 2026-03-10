@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { getStats, getChildren } from '../lib/api';
-import { Search, X, Loader2 } from 'lucide-react';
+import { Search, X, Loader2, MessageSquare } from 'lucide-react';
 
 function Counter({ target, duration = 1400 }) {
   const [count, setCount] = useState(0);
@@ -312,9 +312,41 @@ export default function Dashboard() {
                   {num}
                 </span>
                 <span className="card-name text-[13px] font-medium leading-snug transition-colors duration-150"
-                  style={{ color: 'var(--color-text-primary)' }}>
+                  style={{ color: 'var(--color-text-primary)', flex: 1 }}>
                   {title}
                 </span>
+                <div
+                  className="card-chat-icon"
+                  title={`Chat about ${title}`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    navigate('/chat', { state: { folderNodeId: folder.id, folderName: folder.name } });
+                  }}
+                  style={{
+                    width: 26, height: 26, borderRadius: 6,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    background: 'transparent',
+                    border: '1px solid transparent',
+                    color: 'var(--color-text-muted)',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s',
+                    opacity: 0,
+                    flexShrink: 0,
+                  }}
+                  onMouseEnter={(e) => {
+                    e.stopPropagation();
+                    e.currentTarget.style.background = 'rgba(86, 191, 168, 0.15)';
+                    e.currentTarget.style.borderColor = 'rgba(86, 191, 168, 0.4)';
+                    e.currentTarget.style.color = 'var(--color-accent)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'transparent';
+                    e.currentTarget.style.borderColor = 'transparent';
+                    e.currentTarget.style.color = 'var(--color-text-muted)';
+                  }}
+                >
+                  <MessageSquare size={14} />
+                </div>
               </div>
             );
           })}

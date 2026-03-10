@@ -1,9 +1,10 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
-import { Send, ChevronDown, ChevronUp, FileText, Sparkles, Database, Loader2 } from 'lucide-react';
+import { Send, ChevronDown, ChevronUp, FileText, Sparkles, Database, Loader2, Plus, X } from 'lucide-react';
 import Markdown from 'react-markdown';
 import { chatFdkbStream, getRagStatus, buildRagIndex } from '../lib/api';
 import DocumentViewer from '../components/DocumentViewer';
+import ScopeNavigator from '../components/ScopeNavigator';
 
 const MODELS = [
   { id: 'haiku', label: 'Haiku 4.5' },
@@ -74,8 +75,13 @@ const SUGGESTIONS = [
 
 export default function ChatPage() {
   const location = useLocation();
-  const folderNodeId = location.state?.folderNodeId || null;
-  const folderName = location.state?.folderName || null;
+  const [scope, setScope] = useState(() => {
+    const id = location.state?.folderNodeId || null;
+    const name = location.state?.folderName || null;
+    return id ? { folderNodeId: id, folderName: name } : null;
+  });
+  const [showScopeNav, setShowScopeNav] = useState(false);
+  const folderNodeId = scope?.folderNodeId || null;
 
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
@@ -247,15 +253,76 @@ export default function ChatPage() {
                   border: '1px solid var(--color-border-mid)',
                   borderRadius: 12,
                   padding: '10px 14px',
+                  position: 'relative',
                 }}
               >
+                {/* Scope tag or + Scope button */}
+                {scope ? (
+                  <span style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 4,
+                    padding: '3px 8px 3px 10px',
+                    background: 'rgba(86, 191, 168, 0.1)',
+                    border: '1px solid rgba(86, 191, 168, 0.25)',
+                    borderRadius: 12,
+                    fontSize: 11, fontWeight: 600,
+                    color: 'var(--color-accent)',
+                    whiteSpace: 'nowrap', flexShrink: 0,
+                  }}>
+                    {scope.folderName?.replace(/^[\d.]+ /, '') || 'Folder'}
+                    <X
+                      size={12}
+                      style={{ cursor: 'pointer', opacity: 0.7 }}
+                      onClick={() => setScope(null)}
+                    />
+                  </span>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setShowScopeNav(!showScopeNav)}
+                    style={{
+                      display: 'inline-flex', alignItems: 'center', gap: 3,
+                      padding: '3px 9px',
+                      background: 'transparent',
+                      border: '1px dashed var(--color-border)',
+                      borderRadius: 12,
+                      fontSize: 11,
+                      color: 'var(--color-text-muted)',
+                      cursor: 'pointer',
+                      whiteSpace: 'nowrap', flexShrink: 0,
+                      transition: 'all 0.15s',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.borderColor = 'var(--color-accent)';
+                      e.currentTarget.style.color = 'var(--color-accent)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.borderColor = 'var(--color-border)';
+                      e.currentTarget.style.color = 'var(--color-text-muted)';
+                    }}
+                  >
+                    <Plus size={11} />
+                    Scope
+                  </button>
+                )}
+
+                {/* Scope navigator popup */}
+                {showScopeNav && (
+                  <ScopeNavigator
+                    onSelect={(folderId, folderName) => {
+                      setScope({ folderNodeId: folderId, folderName });
+                      setShowScopeNav(false);
+                    }}
+                    onClose={() => setShowScopeNav(false)}
+                  />
+                )}
+
                 <input
                   ref={inputRef}
                   type="text"
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={handleKeyDown}
-                  placeholder="Reply..."
+                  placeholder={scope ? `Ask about ${scope.folderName?.replace(/^[\d.]+ /, '')}...` : 'Reply...'}
                   disabled={streaming}
                   style={{
                     flex: 1,

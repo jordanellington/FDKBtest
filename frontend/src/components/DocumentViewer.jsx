@@ -22,6 +22,7 @@ function DistributionBadge({ classification }) {
   const config = {
     green: { color: '#4db8a4', bg: 'rgba(77,184,164,0.10)', border: 'rgba(77,184,164,0.20)' },
     amber: { color: '#c8a44e', bg: 'rgba(200,164,78,0.10)', border: 'rgba(200,164,78,0.20)' },
+    blue:  { color: '#6ba3e8', bg: 'rgba(107,163,232,0.10)', border: 'rgba(107,163,232,0.20)' },
     red:   { color: '#C75B5B', bg: 'rgba(199,91,91,0.10)', border: 'rgba(199,91,91,0.20)' },
   };
   const c = config[classification.color] || config.red;
@@ -358,10 +359,17 @@ export default function DocumentViewer({ document: doc, searchQuery, onClose }) 
 
         {detailsOpen && (
           <div style={{ padding: '4px 16px 14px', borderTop: '1px solid rgba(255,255,255,0.04)' }}>
+            {/* Article title if CCC-enriched */}
+            {meta.articleTitle && (
+              <div style={{ marginBottom: 10 }}>
+                <p className="text-[9px] text-text-muted uppercase tracking-wider mb-1">Article Title</p>
+                <p className="text-[12px] text-text-primary font-medium leading-snug">{meta.articleTitle}</p>
+              </div>
+            )}
             <div className="details-grid grid grid-cols-3 gap-3">
               <div>
-                <p className="text-[9px] text-text-muted uppercase tracking-wider mb-1">Topic</p>
-                <p className="text-[11px] text-text-secondary">{meta.topic}</p>
+                <p className="text-[9px] text-text-muted uppercase tracking-wider mb-1">{meta.publicationTitle ? 'Publication' : 'Topic'}</p>
+                <p className="text-[11px] text-text-secondary">{meta.publicationTitle || meta.topic}</p>
               </div>
               <div>
                 <p className="text-[9px] text-text-muted uppercase tracking-wider mb-1">Publisher</p>
@@ -369,9 +377,32 @@ export default function DocumentViewer({ document: doc, searchQuery, onClose }) 
               </div>
               <div>
                 <p className="text-[9px] text-text-muted uppercase tracking-wider mb-1">Distribution</p>
-                <p className="text-[11px] text-text-secondary">{classification.tooltip}</p>
+                <p className="text-[11px] text-text-secondary">{classification.tooltip?.split('\n')[0]}</p>
               </div>
             </div>
+            {/* Extra CCC fields */}
+            {meta.cccEnriched && (
+              <div className="details-grid grid grid-cols-3 gap-3" style={{ marginTop: 8 }}>
+                {meta.issn && (
+                  <div>
+                    <p className="text-[9px] text-text-muted uppercase tracking-wider mb-1">ISSN</p>
+                    <p className="text-[11px] text-text-secondary">{meta.issn}</p>
+                  </div>
+                )}
+                {meta.copyrightHolder && (
+                  <div>
+                    <p className="text-[9px] text-text-muted uppercase tracking-wider mb-1">Copyright</p>
+                    <p className="text-[11px] text-text-secondary">{meta.copyrightHolder}</p>
+                  </div>
+                )}
+                {meta.publicationDate && (
+                  <div>
+                    <p className="text-[9px] text-text-muted uppercase tracking-wider mb-1">Published</p>
+                    <p className="text-[11px] text-text-secondary">{meta.publicationDate}</p>
+                  </div>
+                )}
+              </div>
+            )}
             <div style={{ marginTop: 8 }}>
               <p className="text-[9px] text-text-muted uppercase tracking-wider mb-1">Path</p>
               <p className="text-[10px] text-text-muted bg-bg-elevated rounded-md p-2 break-all leading-relaxed">{path || '—'}</p>

@@ -371,12 +371,13 @@ export default function SearchPage() {
                         ? (doc.content.sizeInBytes / 1048576).toFixed(2) + ' MB'
                         : (doc.content.sizeInBytes / 1024).toFixed(0) + ' KB'
                       : '—';
-                    const modified = doc.modifiedAt ? new Date(doc.modifiedAt).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : '—';
+                    const modified = meta.cccEnriched ? meta.date : (doc.modifiedAt ? new Date(doc.modifiedAt).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : '—');
                     const cls = classifyDocument(doc);
                     const isSelected = selectedDoc?.id === doc.id;
                     const badgeConfig = {
                       green: { color: '#4db8a4', bg: 'rgba(77,184,164,0.07)' },
-                      amber: { color: '#6ba3e8', bg: 'rgba(107,163,232,0.07)' },
+                      amber: { color: '#c8a44e', bg: 'rgba(200,164,78,0.07)' },
+                      blue:  { color: '#6ba3e8', bg: 'rgba(107,163,232,0.07)' },
                       red:   { color: '#e8836e', bg: 'rgba(232,131,110,0.07)' },
                     };
                     const bc = badgeConfig[cls.color] || badgeConfig.red;
@@ -409,7 +410,7 @@ export default function SearchPage() {
                           }} />
                         )}
 
-                        {/* Top line: icon + name + meta */}
+                        {/* Top line: icon + name/title + meta */}
                         <div className="flex items-center" style={{ gap: 10, marginBottom: 5 }}>
                           <FileText
                             size={13}
@@ -420,13 +421,13 @@ export default function SearchPage() {
                           <span style={{
                             fontSize: 13, fontWeight: 600,
                             color: isSelected ? 'var(--color-text-primary)' : 'var(--color-text-secondary)',
-                          }}>
-                            {doc.name}
+                            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0, flex: 1,
+                          }} title={meta.displayTitle ? `${doc.name}\n${meta.articleTitle}` : doc.name}>
+                            {meta.displayTitle || doc.name}
                           </span>
-                          <div style={{ flex: 1 }} />
-                          <span className="result-meta-pages" style={{ fontSize: 11, color: 'var(--color-text-muted)', fontVariantNumeric: 'tabular-nums' }}>{pages} pg</span>
-                          <span className="result-meta-size" style={{ fontSize: 11, color: 'var(--color-text-muted)', fontVariantNumeric: 'tabular-nums', minWidth: 54, textAlign: 'right' }}>{size}</span>
-                          <span className="result-meta-date" style={{ fontSize: 11, color: 'var(--color-text-muted)', fontVariantNumeric: 'tabular-nums', minWidth: 60, textAlign: 'right' }}>{modified}</span>
+                          <span className="result-meta-pages" style={{ fontSize: 11, color: 'var(--color-text-muted)', fontVariantNumeric: 'tabular-nums', flexShrink: 0 }}>{pages} pg</span>
+                          <span className="result-meta-size" style={{ fontSize: 11, color: 'var(--color-text-muted)', fontVariantNumeric: 'tabular-nums', minWidth: 54, textAlign: 'right', flexShrink: 0 }}>{size}</span>
+                          <span className="result-meta-date" style={{ fontSize: 11, color: 'var(--color-text-muted)', fontVariantNumeric: 'tabular-nums', minWidth: 60, textAlign: 'right', flexShrink: 0 }}>{modified}</span>
                         </div>
 
                         {/* Bottom line: publisher + status badge (right) */}
@@ -440,7 +441,7 @@ export default function SearchPage() {
                             minWidth: 0,
                             flex: 1,
                           }}>
-                            {meta.publisher}
+                            {meta.cccEnriched ? (meta.publicationTitle || meta.publisher) : meta.publisher}
                           </span>
                           <span
                             title={cls.tooltip}

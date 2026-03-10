@@ -4,6 +4,7 @@ import LoginPage from './pages/LoginPage';
 import Dashboard from './pages/Dashboard';
 import Browser from './pages/Browser';
 import SearchPage from './pages/SearchPage';
+import ChatPage from './pages/ChatPage';
 import Layout from './components/Layout';
 
 function ProtectedRoute({ children }) {
@@ -31,6 +32,7 @@ function AppRoutes() {
         <Route path="browse" element={<Browser />} />
         <Route path="browse/:nodeId" element={<Browser />} />
         <Route path="search" element={<SearchPage />} />
+        <Route path="chat" element={<ChatPage />} />
       </Route>
     </Routes>
   );

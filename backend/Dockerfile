@@ -1,7 +1,7 @@
 FROM node:20-slim
 
 RUN apt-get update && apt-get install -y --no-install-recommends python3 python3-pip && \
-    pip3 install --no-cache-dir --break-system-packages pymupdf && \
+    pip3 install --no-cache-dir --break-system-packages pymupdf4llm && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app

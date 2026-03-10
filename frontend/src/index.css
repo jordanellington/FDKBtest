@@ -435,3 +435,37 @@ html.light .rpv-dark-theme .rpv-core__page-layer { box-shadow: 0 2px 8px rgba(0,
   margin: 6px 0;
   color: var(--color-text-muted);
 }
+
+/* Full-page chat markdown — larger sizes for ChatPage */
+.chat-markdown-lg p { margin: 0 0 12px; }
+.chat-markdown-lg p:last-child { margin-bottom: 0; }
+.chat-markdown-lg strong { color: var(--color-text-primary); font-weight: 600; }
+.chat-markdown-lg ul, .chat-markdown-lg ol { margin: 6px 0 12px; padding-left: 22px; }
+.chat-markdown-lg li { margin-bottom: 4px; }
+.chat-markdown-lg h1, .chat-markdown-lg h2, .chat-markdown-lg h3 {
+  color: var(--color-text-primary);
+  font-weight: 600;
+  margin: 16px 0 6px;
+}
+.chat-markdown-lg h1 { font-size: 18px; }
+.chat-markdown-lg h2 { font-size: 16px; }
+.chat-markdown-lg h3 { font-size: 14px; }
+.chat-markdown-lg code {
+  background: rgba(255,255,255,0.06);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 13px;
+}
+.chat-markdown-lg pre {
+  background: rgba(255,255,255,0.04);
+  padding: 12px;
+  border-radius: 6px;
+  overflow-x: auto;
+  margin: 8px 0;
+}
+.chat-markdown-lg blockquote {
+  border-left: 2px solid rgba(255,255,255,0.1);
+  padding-left: 14px;
+  margin: 8px 0;
+  color: var(--color-text-muted);
+}

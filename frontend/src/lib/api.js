@@ -139,6 +139,52 @@ export async function search(query, maxItems = 25, skipCount = 0, exact = false,
   return resp.json();
 }
 
+export async function getRagStatus() {
+  const resp = await request('/api/rag/status');
+  return resp.json();
+}
+
+export async function buildRagIndex(onProgress, onComplete, onError, { clearExisting = false } = {}) {
+  const resp = await fetch(`${API_URL}/api/rag/build-index`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-session-id': sessionId || '',
+    },
+    body: JSON.stringify({ clearExisting }),
+  });
+
+  if (!resp.ok) {
+    const err = await resp.json().catch(() => ({ error: 'Build request failed' }));
+    onError(err.error || 'Build request failed');
+    return;
+  }
+
+  const reader = resp.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split('\n');
+    buffer = lines.pop();
+
+    for (const line of lines) {
+      if (line.startsWith('data: ')) {
+        try {
+          const data = JSON.parse(line.slice(6));
+          if (data.type === 'progress' || data.type === 'status') onProgress(data);
+          else if (data.type === 'complete') onComplete(data);
+          else if (data.type === 'error') onError(data.message);
+        } catch {}
+      }
+    }
+  }
+}
+
 export function getContentUrl(nodeId, download = false) {
   return `${API_URL}/api/nodes/${nodeId}/content?sid=${sessionId}${download ? '&download=true' : ''}`;
 }
@@ -147,14 +193,14 @@ export function getPreviewUrl(nodeId) {
   return `${API_URL}/api/nodes/${nodeId}/preview?sid=${sessionId}`;
 }
 
-export async function chatStream(messages, doc, onDelta, onDone, onError, onStatus) {
+export async function chatStream(messages, doc, onDelta, onDone, onError, onStatus, model) {
   const resp = await fetch(`${API_URL}/api/chat`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'x-session-id': sessionId || '',
     },
-    body: JSON.stringify({ messages, document: doc }),
+    body: JSON.stringify({ messages, document: doc, model }),
   });
 
   if (resp.status === 401) {
@@ -188,6 +234,54 @@ export async function chatStream(messages, doc, onDelta, onDone, onError, onStat
           else if (data.type === 'done') onDone();
           else if (data.type === 'error') onError(data.message);
           else if (data.type === 'status' && onStatus) onStatus(data.message);
+        } catch {}
+      }
+    }
+  }
+}
+
+export async function chatFdkbStream(messages, { onDelta, onDone, onError, onStatus, onSources, model }) {
+  const resp = await fetch(`${API_URL}/api/chat/fdkb`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-session-id': sessionId || '',
+    },
+    body: JSON.stringify({ messages, model }),
+  });
+
+  if (resp.status === 401) {
+    setSession(null);
+    window.location.href = '/login';
+    return;
+  }
+  if (!resp.ok) {
+    const err = await resp.json().catch(() => ({ error: 'Chat request failed' }));
+    onError(err.error || 'Chat request failed');
+    return;
+  }
+
+  const reader = resp.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split('\n');
+    buffer = lines.pop();
+
+    for (const line of lines) {
+      if (line.startsWith('data: ')) {
+        try {
+          const data = JSON.parse(line.slice(6));
+          if (data.type === 'delta') onDelta(data.text);
+          else if (data.type === 'done') onDone();
+          else if (data.type === 'error') onError(data.message);
+          else if (data.type === 'status' && onStatus) onStatus(data.message);
+          else if (data.type === 'sources' && onSources) onSources(data.documents);
         } catch {}
       }
     }

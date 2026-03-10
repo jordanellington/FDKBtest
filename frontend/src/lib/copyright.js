@@ -1,5 +1,6 @@
 // Copyright classification engine for FDKB POC
-// Rule-based heuristics — designed to be swapped for a real clearinghouse API later
+// Uses CCC (Copyright Clearance Center) data when available,
+// falls back to rule-based heuristics for non-enriched documents.
 
 const PUBLIC_PATH_PATTERNS = [
   'FDA Publications',
@@ -16,6 +17,34 @@ const INTERNAL_PATH_PATTERNS = [
   'Tobacco Litigation',
 ];
 
+// CCC distribution level descriptions (permitted uses)
+const CCC_LEVEL_INFO = {
+  'Internal Only': {
+    status: 'internal',
+    label: 'Internal',
+    color: 'amber',
+    tooltip: 'Internal sharing only — email to colleagues, post on intranet/KM library, distribute at internal meetings, store in internal repository.',
+  },
+  'Internal + Client (with notice)': {
+    status: 'client',
+    label: 'Client OK',
+    color: 'blue',
+    tooltip: 'Internal use plus client sharing — may send single electronic copy to client on request. Must include copyright notice: "This copy is provided under license from the Copyright Clearance Center. Further reproduction or distribution is not permitted."',
+  },
+  'External Unrestricted': {
+    status: 'external',
+    label: 'External',
+    color: 'green',
+    tooltip: 'Open access — share with clients, prospects, or external parties without per-instance permission. Typically open access or broadly licensed content.',
+  },
+  'Not Covered': {
+    status: 'restricted',
+    label: 'Not Covered',
+    color: 'red',
+    tooltip: 'No CCC-licensed rights — must obtain direct publisher permission or rely on fair use analysis before any reproduction or distribution. Contact the library/KM team.',
+  },
+};
+
 // Simple deterministic hash to create a realistic mix for the POC
 function simpleHash(str) {
   let hash = 0;
@@ -27,12 +56,25 @@ function simpleHash(str) {
 }
 
 export function classifyDocument(item) {
-  if (!item) return { status: 'restricted', label: 'Restricted', color: 'red', tooltip: 'Not cleared for distribution' };
+  if (!item) return { status: 'restricted', label: 'Not Covered', color: 'red', tooltip: 'Not cleared for distribution' };
 
+  // ── CCC data takes priority (injected by backend enrichment) ──
+  const props = item.properties || {};
+  const cccLevel = props['ccc:distroLevel'];
+  if (cccLevel && CCC_LEVEL_INFO[cccLevel]) {
+    const info = CCC_LEVEL_INFO[cccLevel];
+    const matchedOn = props['ccc:matchedOn'] || '';
+    return {
+      ...info,
+      tooltip: info.tooltip + (matchedOn ? `\n\nMatched: ${matchedOn}` : ''),
+      cccEnriched: true,
+    };
+  }
+
+  // ── Fallback: path-based rules + hash (for non-CCC documents) ──
   const path = item.path?.name || '';
   const name = item.name || '';
 
-  // Path-based rules first (highest confidence)
   for (const pattern of PUBLIC_PATH_PATTERNS) {
     if (path.includes(pattern)) {
       return {
@@ -55,8 +97,6 @@ export function classifyDocument(item) {
     }
   }
 
-  // For remaining docs, use a deterministic hash to simulate clearinghouse results
-  // This creates a ~30% external, ~35% internal, ~35% restricted mix
   const hash = simpleHash(name);
   const bucket = hash % 100;
 
@@ -81,32 +121,62 @@ export function classifyDocument(item) {
 }
 
 export function extractMetadata(item) {
-  if (!item) return { author: '—', date: '—', topic: '—', publisher: '—' };
+  if (!item) return { author: '—', date: '—', topic: '—', publisher: '—', articleTitle: null, issn: null, copyrightHolder: null, publicationDate: null };
 
   const props = item.properties || {};
-  const path = item.path?.name || '';
+  const pathStr = item.path?.name || '';
 
-  // Author: try cm:author, then cm:creator, then createdByUser
-  const author = props['cm:author']
+  // ── CCC-enriched metadata takes priority ──
+  const cccPublisher = props['ccc:publisher'];
+  const cccAuthors = props['ccc:authors'];
+  const cccPubDate = props['ccc:publicationDate'];
+  const cccArticleTitle = props['ccc:articleTitle'];
+  const cccPublicationTitle = props['ccc:publicationTitle'];
+  const cccIssn = props['ccc:issn'];
+  const cccCopyrightHolder = props['ccc:copyrightHolder'];
+
+  // Author: CCC > cm:author > createdByUser
+  const author = cccAuthors
+    || props['cm:author']
     || item.createdByUser?.displayName
     || '—';
 
-  // Date: try cm:created, then createdAt, then modifiedAt
-  const rawDate = props['cm:created'] || item.createdAt || item.modifiedAt;
+  // Date: CCC publication date > cm:created > createdAt
+  const rawDate = cccPubDate || props['cm:created'] || item.createdAt || item.modifiedAt;
   const date = rawDate
     ? new Date(rawDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
     : '—';
 
   // Topic: derive from parent folder in path
-  const segments = path
+  const segments = pathStr
     .replace('/Company Home/Sites/FDKB-staging/documentlibrary/', '')
     .split('/');
   const topic = segments[0] || '—';
 
-  // Publisher: derive from path or properties
-  const publisher = props['cm:publisher'] || derivePublisher(path, item.name);
+  // Publisher: CCC > cm:publisher > derived
+  const publisher = cccPublisher || props['cm:publisher'] || derivePublisher(pathStr, item.name);
 
-  return { author, date, topic, publisher };
+  // Display title: prefer articleTitle, but for multi-article pubs (contain " / "),
+  // use publicationTitle instead (or first headline segment as fallback)
+  const displayTitle = cccArticleTitle
+    ? (cccArticleTitle.includes(' / ')
+        ? (cccPublicationTitle || cccArticleTitle.split(' / ')[0])
+        : cccArticleTitle)
+    : null;
+
+  return {
+    author,
+    date,
+    topic,
+    publisher,
+    displayTitle,
+    articleTitle: cccArticleTitle || null,
+    publicationTitle: cccPublicationTitle || null,
+    issn: cccIssn || null,
+    copyrightHolder: cccCopyrightHolder || null,
+    publicationDate: cccPubDate || null,
+    cccEnriched: !!cccPublisher,
+  };
 }
 
 const MOCK_PUBLISHERS = [

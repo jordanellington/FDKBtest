@@ -34,7 +34,8 @@ function Breadcrumbs({ path, onNavigate }) {
 
 const BADGE_CONFIG = {
   green: { color: '#4db8a4', bg: 'rgba(77,184,164,0.07)' },
-  amber: { color: '#6ba3e8', bg: 'rgba(107,163,232,0.07)' },
+  amber: { color: '#c8a44e', bg: 'rgba(200,164,78,0.07)' },
+  blue:  { color: '#6ba3e8', bg: 'rgba(107,163,232,0.07)' },
   red:   { color: '#e8836e', bg: 'rgba(232,131,110,0.07)' },
 };
 
@@ -292,7 +293,7 @@ export default function Browser() {
                           ? (file.content.sizeInBytes / 1048576).toFixed(2) + ' MB'
                           : (file.content.sizeInBytes / 1024).toFixed(0) + ' KB'
                         : '—';
-                      const modified = file.modifiedAt ? new Date(file.modifiedAt).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : '—';
+                      const modified = meta.cccEnriched ? meta.date : (file.modifiedAt ? new Date(file.modifiedAt).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : '—');
                       const cls = classifyDocument(file);
                       const bc = BADGE_CONFIG[cls.color] || BADGE_CONFIG.red;
                       const isSelected = selectedDoc?.id === file.id;
@@ -334,13 +335,13 @@ export default function Browser() {
                             <span style={{
                               fontSize: 13, fontWeight: 600,
                               color: isSelected ? 'var(--color-text-primary)' : 'var(--color-text-secondary)',
-                            }}>
-                              {file.name}
+                              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0, flex: 1,
+                            }} title={meta.displayTitle ? `${file.name}\n${meta.articleTitle}` : file.name}>
+                              {meta.displayTitle || file.name}
                             </span>
-                            <div style={{ flex: 1 }} />
-                            <span className="result-meta-pages" style={{ fontSize: 11, color: 'var(--color-text-muted)', fontVariantNumeric: 'tabular-nums' }}>{pages} pg</span>
-                            <span className="result-meta-size" style={{ fontSize: 11, color: 'var(--color-text-muted)', fontVariantNumeric: 'tabular-nums', minWidth: 54, textAlign: 'right' }}>{size}</span>
-                            <span className="result-meta-date" style={{ fontSize: 11, color: 'var(--color-text-muted)', fontVariantNumeric: 'tabular-nums', minWidth: 60, textAlign: 'right' }}>{modified}</span>
+                            <span className="result-meta-pages" style={{ fontSize: 11, color: 'var(--color-text-muted)', fontVariantNumeric: 'tabular-nums', flexShrink: 0 }}>{pages} pg</span>
+                            <span className="result-meta-size" style={{ fontSize: 11, color: 'var(--color-text-muted)', fontVariantNumeric: 'tabular-nums', minWidth: 54, textAlign: 'right', flexShrink: 0 }}>{size}</span>
+                            <span className="result-meta-date" style={{ fontSize: 11, color: 'var(--color-text-muted)', fontVariantNumeric: 'tabular-nums', minWidth: 60, textAlign: 'right', flexShrink: 0 }}>{modified}</span>
                           </div>
 
                           <div className="flex items-center" style={{ paddingLeft: 23, gap: 10 }}>
@@ -353,7 +354,7 @@ export default function Browser() {
                               minWidth: 0,
                               flex: 1,
                             }}>
-                              {meta.publisher}
+                              {meta.cccEnriched ? (meta.publicationTitle || meta.publisher) : meta.publisher}
                             </span>
                             <span
                               title={cls.tooltip}

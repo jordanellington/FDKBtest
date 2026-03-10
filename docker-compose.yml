@@ -13,6 +13,7 @@ services:
       - AWS_BEDROCK_MODEL_ID=${AWS_BEDROCK_MODEL_ID:-us.anthropic.claude-haiku-4-5-20251001-v1:0}
     volumes:
       - ./backend/src:/app/src
+      - ./backend/data/ccc-pilot-results.json:/app/data/ccc-pilot-results.json
       - ./data/rag-cache:/app/data/rag-cache
 
   frontend:

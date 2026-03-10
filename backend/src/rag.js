@@ -92,7 +92,7 @@ export function chunkDocument(text) {
 /**
  * Embed a single text using Titan Embed v2.
  */
-async function embedSingle(text, bedrockClient) {
+export async function embedSingle(text, bedrockClient) {
   // Titan Embed v2 max input is ~8K tokens; truncate if needed
   const truncated = text.length > 30000 ? text.slice(0, 30000) : text;
 
@@ -114,7 +114,7 @@ async function embedSingle(text, bedrockClient) {
 /**
  * Embed multiple chunks with concurrency pool.
  */
-async function embedChunks(chunks, bedrockClient) {
+export async function embedChunks(chunks, bedrockClient) {
   const results = new Array(chunks.length);
 
   for (let i = 0; i < chunks.length; i += CONCURRENCY) {
@@ -135,7 +135,7 @@ async function embedChunks(chunks, bedrockClient) {
 /**
  * Dot product (vectors are pre-normalized, so this equals cosine similarity).
  */
-function dotProduct(a, b) {
+export function dotProduct(a, b) {
   let sum = 0;
   for (let i = 0; i < a.length; i++) {
     sum += a[i] * b[i];
@@ -146,14 +146,14 @@ function dotProduct(a, b) {
 /**
  * Get the disk cache file path for a document.
  */
-function getCachePath(docId) {
+export function getCachePath(docId) {
   return path.join(CACHE_DIR, `${docId.replace(/[^a-zA-Z0-9-]/g, '_')}.json`);
 }
 
 /**
  * Save cache entry to disk.
  */
-function saveToDisk(docId, modifiedAt, entry) {
+export function saveToDisk(docId, modifiedAt, entry) {
   try {
     const data = {
       modifiedAt,
@@ -293,5 +293,122 @@ export async function retrieveChunks(question, docId, modifiedAt, bedrockClient)
     page: s.chunk.page,
     sectionHeader: s.chunk.sectionHeader,
     score: s.score,
+  }));
+}
+
+// ── Cross-document corpus index ─────────────────────────────────────────────
+
+// Flat index of all chunks across all cached documents
+let corpusIndex = null; // { entries: [{text, page, sectionHeader, embedding, docId, docName}], docCount }
+
+/**
+ * Load all cached embeddings from disk into a flat corpus index.
+ * Called once on first FDKB chat request.
+ */
+export function loadCorpusIndex(cccResults) {
+  const cacheFiles = fs.readdirSync(CACHE_DIR).filter(f => f.endsWith('.json'));
+  const entries = [];
+  const docNames = new Map(); // docId → name
+
+  // Build docId → name/metadata lookup from CCC results
+  if (cccResults) {
+    for (const doc of cccResults) {
+      if (!doc.error) {
+        docNames.set(doc.nodeId, doc.name);
+      }
+    }
+  }
+
+  for (const file of cacheFiles) {
+    try {
+      const data = JSON.parse(fs.readFileSync(path.join(CACHE_DIR, file), 'utf-8'));
+      // Extract docId from filename (reverse of getCachePath sanitization)
+      const docId = file.replace('.json', '').replace(/_/g, '-');
+      const docName = docNames.get(docId) || file.replace('.json', '');
+
+      if (!data.chunks || !data.embeddings) continue;
+
+      for (let i = 0; i < data.chunks.length; i++) {
+        entries.push({
+          text: data.chunks[i].text,
+          page: data.chunks[i].page,
+          sectionHeader: data.chunks[i].sectionHeader,
+          embedding: new Float32Array(data.embeddings[i]),
+          docId,
+          docName,
+        });
+      }
+    } catch (err) {
+      console.error(`[rag] Failed to load corpus file ${file}:`, err.message);
+    }
+  }
+
+  corpusIndex = { entries, docCount: cacheFiles.length };
+  console.log(`[rag] Corpus index loaded: ${entries.length} chunks from ${cacheFiles.length} documents`);
+  return corpusIndex;
+}
+
+/**
+ * Get the corpus index, loading it if needed.
+ */
+export function getCorpusIndex(cccResults) {
+  if (!corpusIndex) {
+    loadCorpusIndex(cccResults);
+  }
+  return corpusIndex;
+}
+
+const CROSS_DOC_K = 10;
+
+/**
+ * Retrieve the most relevant chunks across all indexed documents.
+ * @param {string[]} [nodeIds] - Optional list of nodeIds to restrict search to. If omitted, searches all.
+ */
+export async function retrieveAcrossDocs(question, bedrockClient, cccResults, { nodeIds } = {}) {
+  const corpus = getCorpusIndex(cccResults);
+  if (!corpus || corpus.entries.length === 0) {
+    throw new Error('No documents indexed. Run build-rag-index.js first.');
+  }
+
+  // Filter corpus entries if nodeIds provided
+  const searchEntries = nodeIds
+    ? corpus.entries.filter(e => nodeIds.includes(e.docId))
+    : corpus.entries;
+
+  if (searchEntries.length === 0) {
+    throw new Error('No matching documents found in index for the given filter.');
+  }
+
+  const questionVec = await embedSingle(question, bedrockClient);
+  const k = BROAD_KEYWORDS.test(question) ? CROSS_DOC_K * 2 : CROSS_DOC_K;
+
+  // Score filtered chunks
+  const scored = searchEntries.map((entry, i) => ({
+    entry,
+    score: dotProduct(questionVec, entry.embedding),
+    index: i,
+  }));
+
+  scored.sort((a, b) => b.score - a.score);
+
+  const topK = scored.slice(0, k).filter(s => s.score >= SIMILARITY_THRESHOLD);
+
+  // Deduplicate: if multiple chunks from the same doc, keep the best ones
+  const byDoc = new Map();
+  for (const s of topK) {
+    const key = s.entry.docId;
+    if (!byDoc.has(key)) byDoc.set(key, []);
+    byDoc.get(key).push(s);
+  }
+
+  console.log(`[rag] Cross-doc retrieval: ${topK.length} chunks from ${byDoc.size} documents (top score=${scored[0]?.score.toFixed(3)})`);
+
+  return topK.map(s => ({
+    text: s.entry.text,
+    page: s.entry.page,
+    sectionHeader: s.entry.sectionHeader,
+    score: s.score,
+    docId: s.entry.docId,
+    docName: s.entry.docName,
   }));
 }

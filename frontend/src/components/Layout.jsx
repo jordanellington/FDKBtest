@@ -28,6 +28,7 @@ export default function Layout() {
 
   const mainNav = [
     { to: '/', label: 'Dashboard', end: true },
+    { to: '/chat', label: 'Chat with FDKB' },
   ];
 
   return (

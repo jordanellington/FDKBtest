@@ -1,13 +1,60 @@
 import express from 'express';
 import cors from 'cors';
 import fetch from 'node-fetch';
-import { execFile } from 'child_process';
+import { execFile, execFileSync } from 'child_process';
 import { fileURLToPath } from 'url';
 import path from 'path';
+import { readFileSync, existsSync, readdirSync, unlinkSync } from 'fs';
 import { BedrockRuntimeClient, InvokeModelWithResponseStreamCommand } from '@aws-sdk/client-bedrock-runtime';
-import { getOrBuildCache, retrieveChunks, isCached } from './rag.js';
+import { getOrBuildCache, retrieveChunks, isCached, retrieveAcrossDocs, getCorpusIndex, chunkDocument, embedChunks, getCachePath, saveToDisk, loadCorpusIndex } from './rag.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+// ── CCC enrichment data ─────────────────────────────────────────────────────
+// Loaded from batch extraction results (keyed by Alfresco nodeId)
+const cccDataPath = path.join(__dirname, '../data/ccc-pilot-results.json');
+const cccMap = new Map();
+if (existsSync(cccDataPath)) {
+  try {
+    const cccData = JSON.parse(readFileSync(cccDataPath, 'utf8'));
+    for (const record of cccData) {
+      if (record.nodeId) {
+        // Errors default to Not Covered
+        if (record.error) {
+          record.cccDistroLevel = 'Not Covered';
+          record.cccMatchedOn = 'Extraction failed — defaulting to most restrictive';
+        }
+        cccMap.set(record.nodeId, record);
+      }
+    }
+    console.log(`[ccc] Loaded ${cccMap.size} CCC enrichment records`);
+  } catch (err) {
+    console.warn('[ccc] Failed to load CCC data:', err.message);
+  }
+}
+
+function enrichWithCcc(entries) {
+  if (!entries || !Array.isArray(entries) || cccMap.size === 0) return;
+  let matched = 0;
+  for (const entry of entries) {
+    const node = entry.entry || entry;
+    const record = cccMap.get(node.id);
+    if (!record) continue;
+    matched++;
+    if (!node.properties) node.properties = {};
+    node.properties['ccc:distroLevel'] = record.cccDistroLevel;
+    node.properties['ccc:matchedOn'] = record.cccMatchedOn;
+    node.properties['ccc:articleTitle'] = record.articleTitle || null;
+    node.properties['ccc:publicationTitle'] = record.publicationTitle || null;
+    node.properties['ccc:publisher'] = record.publisher || null;
+    node.properties['ccc:issn'] = record.issn || null;
+    node.properties['ccc:authors'] = record.authors || null;
+    node.properties['ccc:publicationDate'] = record.publicationDate || null;
+    node.properties['ccc:copyrightHolder'] = record.copyrightHolder || null;
+    node.properties['ccc:confidence'] = record.confidence || null;
+  }
+  if (entries.length > 0) console.log(`[ccc] Enriched ${matched}/${entries.length} entries`);
+}
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -349,6 +396,8 @@ app.get('/api/nodes/:nodeId/children', requireAuth, async (req, res) => {
     if (!resp.ok) {
       console.error('Children API error:', resp.status, JSON.stringify(data));
     }
+    // Enrich with CCC metadata if available
+    if (data.list?.entries) enrichWithCcc(data.list.entries);
     res.json(data);
   } catch (err) {
     if (handleAlfrescoExpiry(err, req, res)) return;
@@ -366,6 +415,8 @@ app.get('/api/nodes/:nodeId', requireAuth, async (req, res) => {
     );
 
     const data = await resp.json();
+    // Enrich single node with CCC metadata
+    if (data.entry) enrichWithCcc([data]);
     res.json(data.entry);
   } catch (err) {
     if (handleAlfrescoExpiry(err, req, res)) return;
@@ -404,6 +455,8 @@ app.post('/api/search', requireAuth, async (req, res) => {
     );
 
     const data = await resp.json();
+    // Enrich search results with CCC metadata
+    if (data.list?.entries) enrichWithCcc(data.list.entries);
     res.json(data);
   } catch (err) {
     if (handleAlfrescoExpiry(err, req, res)) return;
@@ -493,8 +546,23 @@ const bedrockClient = process.env.AWS_BEDROCK_ACCESS_KEY_ID
 
 const BEDROCK_MODEL_ID = process.env.AWS_BEDROCK_MODEL_ID || 'us.anthropic.claude-haiku-4-5-20251001-v1:0';
 
+const MODEL_MAP = {
+  haiku: 'us.anthropic.claude-haiku-4-5-20251001-v1:0',
+  sonnet: 'us.anthropic.claude-sonnet-4-6-20250514-v1:0',
+  opus: 'us.anthropic.claude-opus-4-6-20250514-v1:0',
+};
+
+function resolveModelId(model) {
+  return MODEL_MAP[model] || BEDROCK_MODEL_ID;
+}
+
+// Load CCC results array for corpus index doc name lookups
+const cccResults = existsSync(cccDataPath)
+  ? JSON.parse(readFileSync(cccDataPath, 'utf8'))
+  : [];
+
 app.post('/api/chat', requireAuth, async (req, res) => {
-  const { messages, document: doc } = req.body;
+  const { messages, document: doc, model } = req.body;
   if (!messages || !Array.isArray(messages)) {
     return res.status(400).json({ error: 'messages array required' });
   }
@@ -604,8 +672,11 @@ app.post('/api/chat', requireAuth, async (req, res) => {
       });
     }
 
+    const selectedModel = resolveModelId(model);
+    console.log(`[chat] Using model: ${selectedModel}`);
+
     const command = new InvokeModelWithResponseStreamCommand({
-      modelId: BEDROCK_MODEL_ID,
+      modelId: selectedModel,
       contentType: 'application/json',
       accept: 'application/json',
       body: JSON.stringify({
@@ -633,6 +704,244 @@ app.post('/api/chat', requireAuth, async (req, res) => {
     console.error('[chat] Bedrock error:', err);
     res.write(`data: ${JSON.stringify({ type: 'error', message: err.message })}\n\n`);
     res.end();
+  }
+});
+
+// --------------- FDKB Cross-Document Chat ---------------
+
+app.post('/api/chat/fdkb', requireAuth, async (req, res) => {
+  const { messages, model, nodeIds, folder } = req.body;
+  if (!messages || !Array.isArray(messages)) {
+    return res.status(400).json({ error: 'messages array required' });
+  }
+
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+
+  if (!bedrockClient) {
+    res.write(`data: ${JSON.stringify({ type: 'error', message: 'AI not configured — AWS Bedrock credentials missing' })}\n\n`);
+    return res.end();
+  }
+
+  try {
+    // Retrieve relevant chunks across all indexed documents
+    const latestQuestion = messages[messages.length - 1]?.content || '';
+    res.write(`data: ${JSON.stringify({ type: 'status', message: 'Searching knowledge base...' })}\n\n`);
+
+    // Resolve folder name to nodeIds if provided (e.g., "12.1" filters to docs starting with "12.1.")
+    let resolvedNodeIds = nodeIds || null;
+    if (folder && !resolvedNodeIds) {
+      resolvedNodeIds = cccResults
+        .filter(d => !d.error && d.name.startsWith(folder))
+        .map(d => d.nodeId);
+      console.log(`[fdkb-chat] Folder filter "${folder}" → ${resolvedNodeIds.length} documents`);
+    }
+
+    const chunks = await retrieveAcrossDocs(latestQuestion, bedrockClient, cccResults, { nodeIds: resolvedNodeIds });
+    console.log(`[fdkb-chat] Retrieved ${chunks.length} chunks from corpus`);
+
+    // Build source documents list (deduplicated, ordered by best score)
+    const sourcesMap = new Map();
+    for (const chunk of chunks) {
+      if (!sourcesMap.has(chunk.docId)) {
+        const cccRecord = cccMap.get(chunk.docId);
+        sourcesMap.set(chunk.docId, {
+          nodeId: chunk.docId,
+          name: chunk.docName,
+          displayTitle: cccRecord?.articleTitle || chunk.docName,
+          publicationTitle: cccRecord?.publicationTitle || null,
+          publisher: cccRecord?.publisher || null,
+          distroLevel: cccRecord?.cccDistroLevel || null,
+          page: chunk.page,
+          score: chunk.score,
+        });
+      }
+    }
+    const sources = [...sourcesMap.values()];
+
+    // Send sources event before streaming
+    res.write(`data: ${JSON.stringify({ type: 'sources', documents: sources })}\n\n`);
+
+    // Build context from retrieved chunks
+    const chunkText = chunks.map((c, i) =>
+      `[Source: ${c.docName}, p.${c.page}${c.sectionHeader ? ', ' + c.sectionHeader : ''}]\n${c.text}`
+    ).join('\n\n---\n\n');
+
+    const corpus = getCorpusIndex(cccResults);
+    const docCount = corpus?.docCount || 0;
+
+    const systemPrompt = `You are a knowledgeable assistant for Covington & Burling's Food & Drug Knowledge Base (FDKB). You have access to a corpus of ${docCount} indexed documents covering FDA policy, biotech regulation, cloning legislation, and related topics.
+
+Relevant sections from multiple documents have been retrieved based on the user's question. Base your answers on these sections.
+
+CITATION RULES:
+- Always cite your sources using the format [DocumentName, p.N] (e.g., [12.1.0003.PDF, p.2])
+- When synthesizing across documents, cite each document that contributed to your answer
+- If retrieved sections don't contain enough information to fully answer, say so
+- Do not fabricate content not present in the provided sections`;
+
+    const bedrockMessages = [
+      ...messages.slice(0, -1).map(m => ({ role: m.role, content: m.content })),
+      {
+        role: 'user',
+        content: `[Retrieved sections from ${sources.length} documents]\n\n${chunkText}\n\n[User question]\n${latestQuestion}`,
+      },
+    ];
+
+    const selectedModel = resolveModelId(model);
+    console.log(`[fdkb-chat] Using model: ${selectedModel}`);
+
+    const command = new InvokeModelWithResponseStreamCommand({
+      modelId: selectedModel,
+      contentType: 'application/json',
+      accept: 'application/json',
+      body: JSON.stringify({
+        anthropic_version: 'bedrock-2023-05-31',
+        max_tokens: 4096,
+        system: systemPrompt,
+        messages: bedrockMessages,
+      }),
+    });
+
+    const response = await bedrockClient.send(command);
+
+    for await (const event of response.body) {
+      if (event.chunk) {
+        const parsed = JSON.parse(new TextDecoder().decode(event.chunk.bytes));
+        if (parsed.type === 'content_block_delta' && parsed.delta?.type === 'text_delta') {
+          res.write(`data: ${JSON.stringify({ type: 'delta', text: parsed.delta.text })}\n\n`);
+        }
+      }
+    }
+
+    res.write(`data: ${JSON.stringify({ type: 'done' })}\n\n`);
+    res.end();
+  } catch (err) {
+    console.error('[fdkb-chat] Error:', err);
+    res.write(`data: ${JSON.stringify({ type: 'error', message: err.message })}\n\n`);
+    res.end();
+  }
+});
+
+// --------------- RAG Index Management ---------------
+
+const CACHE_DIR = path.join(__dirname, '../data/rag-cache');
+
+app.get('/api/rag/status', requireAuth, (req, res) => {
+  try {
+    const cacheFiles = existsSync(CACHE_DIR)
+      ? readdirSync(CACHE_DIR).filter(f => f.endsWith('.json'))
+      : [];
+    const totalDocs = cccResults.filter(d => !d.error).length;
+    res.json({ indexed: cacheFiles.length, total: totalDocs });
+  } catch (err) {
+    res.json({ indexed: 0, total: 0 });
+  }
+});
+
+// Track build state so we don't run two at once
+let buildInProgress = false;
+
+app.post('/api/rag/build-index', requireAuth, async (req, res) => {
+  if (buildInProgress) {
+    return res.status(409).json({ error: 'Index build already in progress' });
+  }
+  if (!bedrockClient) {
+    return res.status(500).json({ error: 'AWS Bedrock not configured' });
+  }
+
+  buildInProgress = true;
+
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+
+  const send = (data) => res.write(`data: ${JSON.stringify(data)}\n\n`);
+
+  // Clear existing cache if requested
+  const { clearExisting } = req.body || {};
+  if (clearExisting && existsSync(CACHE_DIR)) {
+    const files = readdirSync(CACHE_DIR).filter(f => f.endsWith('.json'));
+    for (const f of files) {
+      try { unlinkSync(path.join(CACHE_DIR, f)); } catch {}
+    }
+    send({ type: 'status', message: `Cleared ${files.length} cached files` });
+    console.log(`[rag-build] Cleared ${files.length} cache files`);
+  }
+
+  const docs = cccResults.filter(d => !d.error);
+  const session = req.session;
+  const ALFRESCO_API_URL = `${ALFRESCO_BASE}/share/proxy/alfresco-api/-default-/public`;
+
+  let indexed = 0, skipped = 0, errors = 0;
+
+  try {
+    send({ type: 'status', message: `Starting index build for ${docs.length} documents...` });
+
+    for (let i = 0; i < docs.length; i++) {
+      const doc = docs[i];
+      const cachePath = getCachePath(doc.nodeId);
+
+      // Skip if already cached
+      if (existsSync(cachePath)) {
+        try {
+          const data = JSON.parse(readFileSync(cachePath, 'utf8'));
+          if (data.chunks?.length > 0 && data.embeddings?.length > 0) {
+            skipped++;
+            continue;
+          }
+        } catch {}
+      }
+
+      try {
+        send({ type: 'progress', current: i + 1, total: docs.length, name: doc.name, indexed, skipped, errors });
+
+        // Fetch PDF using user's Alfresco session
+        const pdfResp = await alfrescoFetch(
+          `${ALFRESCO_API}/alfresco/versions/1/nodes/${doc.nodeId}/content`,
+          session
+        );
+        if (!pdfResp.ok) throw new Error(`Fetch failed: ${pdfResp.status}`);
+        const pdfBuffer = Buffer.from(await pdfResp.arrayBuffer());
+
+        // Extract text via pymupdf4llm
+        const scriptPath = path.join(__dirname, '../scripts/extract_text.py');
+        const text = execFileSync('python3', [scriptPath], {
+          input: pdfBuffer,
+          maxBuffer: 50 * 1024 * 1024,
+          timeout: 60000,
+        }).toString('utf-8');
+
+        if (!text || text.trim().length < 50) {
+          errors++;
+          continue;
+        }
+
+        // Chunk and embed
+        const chunks = chunkDocument(text);
+        const embeddings = await embedChunks(chunks, bedrockClient);
+        const modifiedAt = doc.publicationDate || 'unknown';
+        saveToDisk(doc.nodeId, modifiedAt, { chunks, embeddings, cachedAt: Date.now() });
+
+        indexed++;
+      } catch (err) {
+        console.error(`[rag-build] Error on ${doc.name}:`, err.message);
+        errors++;
+      }
+    }
+
+    // Reload corpus index with new data
+    loadCorpusIndex(cccResults);
+
+    send({ type: 'complete', indexed, skipped, errors, total: docs.length });
+    res.end();
+  } catch (err) {
+    console.error('[rag-build] Fatal error:', err);
+    send({ type: 'error', message: err.message });
+    res.end();
+  } finally {
+    buildInProgress = false;
   }
 });
 

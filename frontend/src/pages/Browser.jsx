@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getChildren, getNode } from '../lib/api';
 import DocumentViewer from '../components/DocumentViewer';
-import { Folder, FileText, ChevronRight, Home, ArrowLeft, Layers } from 'lucide-react';
+import { Folder, FileText, ChevronRight, Home, ArrowLeft, Layers, MessageSquare } from 'lucide-react';
 import { classifyDocument, extractMetadata } from '../lib/copyright';
 
 function Breadcrumbs({ path, onNavigate }) {
@@ -192,9 +192,41 @@ export default function Browser() {
                             {num}
                           </span>
                           <span className="card-name text-[13px] font-medium leading-snug transition-colors duration-150"
-                            style={{ color: 'var(--color-text-primary)' }}>
+                            style={{ color: 'var(--color-text-primary)', flex: 1 }}>
                             {title}
                           </span>
+                          <div
+                            className="card-chat-icon"
+                            title={`Chat about ${title}`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigate('/chat', { state: { folderNodeId: folder.id, folderName: folder.name } });
+                            }}
+                            style={{
+                              width: 26, height: 26, borderRadius: 6,
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              background: 'transparent',
+                              border: '1px solid transparent',
+                              color: 'var(--color-text-muted)',
+                              cursor: 'pointer',
+                              transition: 'all 0.15s',
+                              opacity: 0,
+                              flexShrink: 0,
+                            }}
+                            onMouseEnter={(e) => {
+                              e.stopPropagation();
+                              e.currentTarget.style.background = 'rgba(86, 191, 168, 0.15)';
+                              e.currentTarget.style.borderColor = 'rgba(86, 191, 168, 0.4)';
+                              e.currentTarget.style.color = 'var(--color-accent)';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.background = 'transparent';
+                              e.currentTarget.style.borderColor = 'transparent';
+                              e.currentTarget.style.color = 'var(--color-text-muted)';
+                            }}
+                          >
+                            <MessageSquare size={14} />
+                          </div>
                         </div>
                       );
                     })}
@@ -269,9 +301,41 @@ export default function Browser() {
                         }}
                       >
                         <Folder size={14} className="text-accent/50 shrink-0" strokeWidth={1.5} />
-                        <span className="text-[13px] font-medium leading-snug text-text-primary truncate">
+                        <span className="text-[13px] font-medium leading-snug text-text-primary truncate" style={{ flex: 1 }}>
                           {folder.name}
                         </span>
+                        <div
+                          className="card-chat-icon"
+                          title={`Chat about ${folder.name}`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate('/chat', { state: { folderNodeId: folder.id, folderName: folder.name } });
+                          }}
+                          style={{
+                            width: 26, height: 26, borderRadius: 6,
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            background: 'transparent',
+                            border: '1px solid transparent',
+                            color: 'var(--color-text-muted)',
+                            cursor: 'pointer',
+                            transition: 'all 0.15s',
+                            opacity: 0,
+                            flexShrink: 0,
+                          }}
+                          onMouseEnter={(e) => {
+                            e.stopPropagation();
+                            e.currentTarget.style.background = 'rgba(86, 191, 168, 0.15)';
+                            e.currentTarget.style.borderColor = 'rgba(86, 191, 168, 0.4)';
+                            e.currentTarget.style.color = 'var(--color-accent)';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.background = 'transparent';
+                            e.currentTarget.style.borderColor = 'transparent';
+                            e.currentTarget.style.color = 'var(--color-text-muted)';
+                          }}
+                        >
+                          <MessageSquare size={14} />
+                        </div>
                       </motion.div>
                     ))}
                   </div>

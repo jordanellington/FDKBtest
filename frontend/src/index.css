@@ -290,7 +290,7 @@ html.light .rpv-dark-theme .rpv-core__page-layer { box-shadow: 0 2px 8px rgba(0,
 
 /* Dashboard subject card chat icon — reveal on hover */
 .subject-card .card-chat-icon { opacity: 0; transition: opacity 0.15s; }
-.subject-card:hover .card-chat-icon { opacity: 1; border-color: var(--color-border) !important; }
+.subject-card:hover .card-chat-icon { opacity: 1 !important; border-color: var(--color-border) !important; }
 
 /* ===== Mobile Responsive Overrides ===== */
 

@@ -16,7 +16,10 @@
 import { readFileSync, existsSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
-import { execFileSync } from 'child_process';
+import { execFile } from 'child_process';
+import { promisify } from 'util';
+
+const execFileAsync = promisify(execFile);
 import { BedrockRuntimeClient } from '@aws-sdk/client-bedrock-runtime';
 import { chunkDocument, embedChunks, getCachePath, saveToDisk } from '../src/rag.js';
 
@@ -74,14 +77,14 @@ async function fetchPdf(nodeId) {
 
 // ── Text extraction via pymupdf4llm ─────────────────────────────────────────
 
-function extractText(pdfBuffer) {
-  // Uses execFileSync with explicit args — no shell interpolation, safe from injection
-  const result = execFileSync('python3', ['scripts/extract_text.py'], {
+async function extractText(pdfBuffer) {
+  const { stdout } = await execFileAsync('python3', ['scripts/extract_text.py'], {
     input: pdfBuffer,
     maxBuffer: 50 * 1024 * 1024, // 50MB
     timeout: 60000,
+    encoding: 'utf-8',
   });
-  return result.toString('utf-8');
+  return stdout;
 }
 
 // ── Check if doc is already cached ──────────────────────────────────────────
@@ -115,7 +118,7 @@ async function processDoc(doc, idx, total) {
 
     // 2. Extract text
     process.stdout.write('extracting... ');
-    const text = extractText(pdfBuffer);
+    const text = await extractText(pdfBuffer);
     if (!text || text.trim().length < 50) {
       console.log('no text extracted');
       return { status: 'empty' };

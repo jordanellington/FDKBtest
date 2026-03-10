@@ -1,7 +1,10 @@
 import express from 'express';
 import cors from 'cors';
 import fetch from 'node-fetch';
-import { execFile, execFileSync } from 'child_process';
+import { execFile } from 'child_process';
+import { promisify } from 'util';
+
+const execFileAsync = promisify(execFile);
 import { fileURLToPath } from 'url';
 import path from 'path';
 import { readFileSync, existsSync, readdirSync, unlinkSync } from 'fs';
@@ -907,11 +910,12 @@ app.post('/api/rag/build-index', requireAuth, async (req, res) => {
 
         // Extract text via pymupdf4llm
         const scriptPath = path.join(__dirname, '../scripts/extract_text.py');
-        const text = execFileSync('python3', [scriptPath], {
+        const { stdout: text } = await execFileAsync('python3', [scriptPath], {
           input: pdfBuffer,
           maxBuffer: 50 * 1024 * 1024,
           timeout: 60000,
-        }).toString('utf-8');
+          encoding: 'utf-8',
+        });
 
         if (!text || text.trim().length < 50) {
           errors++;

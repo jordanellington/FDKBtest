@@ -1,12 +1,28 @@
 import express from 'express';
 import cors from 'cors';
 import fetch from 'node-fetch';
-import { execFile } from 'child_process';
-import { promisify } from 'util';
-
-const execFileAsync = promisify(execFile);
+import { spawn } from 'child_process';
 import { fileURLToPath } from 'url';
 import path from 'path';
+
+/** Spawn python and stream pdfBuffer via stdin (avoids pipe deadlock with large inputs). */
+function extractTextFromPdf(pdfBuffer, scriptPath, timeout = 120000) {
+  return new Promise((resolve, reject) => {
+    const proc = spawn('python3', [scriptPath], { timeout });
+    const chunks = [];
+    let stderr = '';
+
+    proc.stdout.on('data', (d) => chunks.push(d));
+    proc.stderr.on('data', (d) => { stderr += d.toString(); });
+    proc.on('close', (code) => {
+      if (code !== 0) return reject(new Error(`python3 exited ${code}: ${stderr.slice(0, 200)}`));
+      resolve(Buffer.concat(chunks).toString('utf-8'));
+    });
+    proc.on('error', reject);
+    proc.stdin.write(pdfBuffer);
+    proc.stdin.end();
+  });
+}
 import { readFileSync, existsSync, readdirSync, unlinkSync } from 'fs';
 import { BedrockRuntimeClient, InvokeModelWithResponseStreamCommand } from '@aws-sdk/client-bedrock-runtime';
 import { getOrBuildCache, retrieveChunks, isCached, retrieveAcrossDocs, getCorpusIndex, chunkDocument, embedChunks, getCachePath, saveToDisk, loadCorpusIndex } from './rag.js';
@@ -919,12 +935,7 @@ app.post('/api/rag/build-index', requireAuth, async (req, res) => {
         const pdfBuffer = Buffer.from(await pdfResp.arrayBuffer());
         console.log(`[rag-build] ${doc.name} — ${(pdfBuffer.byteLength / 1024).toFixed(0)}KB, extracting...`);
 
-        const { stdout: text } = await execFileAsync('python3', [scriptPath], {
-          input: pdfBuffer,
-          maxBuffer: 50 * 1024 * 1024,
-          timeout: 120000,
-          encoding: 'utf-8',
-        });
+        const text = await extractTextFromPdf(pdfBuffer, scriptPath);
 
         if (!text || text.trim().length < 50) {
           console.log(`[rag-build] ${doc.name} — no text extracted`);

@@ -16,10 +16,7 @@
 import { readFileSync, existsSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
-import { execFile } from 'child_process';
-import { promisify } from 'util';
-
-const execFileAsync = promisify(execFile);
+import { spawn } from 'child_process';
 import { BedrockRuntimeClient } from '@aws-sdk/client-bedrock-runtime';
 import { chunkDocument, embedChunks, getCachePath, saveToDisk } from '../src/rag.js';
 
@@ -78,13 +75,21 @@ async function fetchPdf(nodeId) {
 // ── Text extraction via pymupdf4llm ─────────────────────────────────────────
 
 async function extractText(pdfBuffer) {
-  const { stdout } = await execFileAsync('python3', ['scripts/extract_text.py'], {
-    input: pdfBuffer,
-    maxBuffer: 50 * 1024 * 1024, // 50MB
-    timeout: 60000,
-    encoding: 'utf-8',
+  return new Promise((resolve, reject) => {
+    const proc = spawn('python3', ['scripts/extract_text.py'], { timeout: 120000 });
+    const chunks = [];
+    let stderr = '';
+
+    proc.stdout.on('data', (d) => chunks.push(d));
+    proc.stderr.on('data', (d) => { stderr += d.toString(); });
+    proc.on('close', (code) => {
+      if (code !== 0) return reject(new Error(`python3 exited ${code}: ${stderr.slice(0, 200)}`));
+      resolve(Buffer.concat(chunks).toString('utf-8'));
+    });
+    proc.on('error', reject);
+    proc.stdin.write(pdfBuffer);
+    proc.stdin.end();
   });
-  return stdout;
 }
 
 // ── Check if doc is already cached ──────────────────────────────────────────

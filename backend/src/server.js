@@ -902,20 +902,22 @@ app.post('/api/rag/build-index', requireAuth, async (req, res) => {
 
     const scriptPath = path.join(__dirname, '../scripts/extract_text.py');
 
-    // Process in parallel batches
-    for (let i = 0; i < toProcess.length; i += BATCH_SIZE) {
-      const batch = toProcess.slice(i, i + BATCH_SIZE);
+    // Process one doc at a time (CPU-bound text extraction on small instance)
+    for (let i = 0; i < toProcess.length; i++) {
+      const doc = toProcess[i];
+      const current = skipped + indexed + errors + i + 1;
 
-      send({ type: 'progress', current: skipped + indexed + errors + i + 1, total: docs.length, name: batch.map(d => d.name).join(', '), indexed, skipped, errors });
+      send({ type: 'progress', current, total: docs.length, name: doc.name, indexed, skipped, errors });
 
-      const results = await Promise.allSettled(batch.map(async (doc) => {
-        const fetchUrl = `${SHARE_API_PROXY}/alfresco/versions/1/nodes/${doc.nodeId}/content`;
-        console.log(`[rag-build] Fetching ${doc.name} from ${fetchUrl}`);
-        const pdfResp = await alfrescoFetch(fetchUrl, session);
-        console.log(`[rag-build] ${doc.name} response: ${pdfResp.status} ${pdfResp.headers.get('content-type')}`);
+      try {
+        console.log(`[rag-build] [${current}/${docs.length}] ${doc.name} — fetching...`);
+        const pdfResp = await alfrescoFetch(
+          `${SHARE_API_PROXY}/alfresco/versions/1/nodes/${doc.nodeId}/content`,
+          session
+        );
         if (!pdfResp.ok) throw new Error(`Fetch failed: ${pdfResp.status}`);
         const pdfBuffer = Buffer.from(await pdfResp.arrayBuffer());
-        console.log(`[rag-build] ${doc.name} downloaded ${(pdfBuffer.byteLength / 1024).toFixed(0)}KB, extracting...`);
+        console.log(`[rag-build] ${doc.name} — ${(pdfBuffer.byteLength / 1024).toFixed(0)}KB, extracting...`);
 
         const { stdout: text } = await execFileAsync('python3', [scriptPath], {
           input: pdfBuffer,
@@ -923,31 +925,23 @@ app.post('/api/rag/build-index', requireAuth, async (req, res) => {
           timeout: 120000,
           encoding: 'utf-8',
         });
-        console.log(`[rag-build] ${doc.name} extracted ${text?.length || 0} chars`);
 
         if (!text || text.trim().length < 50) {
-          return { status: 'empty' };
+          console.log(`[rag-build] ${doc.name} — no text extracted`);
+          errors++;
+          continue;
         }
 
         const chunks = chunkDocument(text);
-        console.log(`[rag-build] ${doc.name} chunked into ${chunks.length}, embedding...`);
+        console.log(`[rag-build] ${doc.name} — ${text.length} chars, ${chunks.length} chunks, embedding...`);
         const embeddings = await embedChunks(chunks, bedrockClient);
-        console.log(`[rag-build] ${doc.name} done`);
         const modifiedAt = doc.publicationDate || 'unknown';
         saveToDisk(doc.nodeId, modifiedAt, { chunks, embeddings, cachedAt: Date.now() });
-
-        return { status: 'ok' };
-      }));
-
-      for (let j = 0; j < results.length; j++) {
-        if (results[j].status === 'fulfilled' && results[j].value.status === 'ok') {
-          indexed++;
-        } else {
-          if (results[j].status === 'rejected') {
-            console.error(`[rag-build] Error on ${batch[j].name}:`, results[j].reason?.message);
-          }
-          errors++;
-        }
+        console.log(`[rag-build] ${doc.name} — done`);
+        indexed++;
+      } catch (err) {
+        console.error(`[rag-build] Error on ${doc.name}:`, err.message);
+        errors++;
       }
     }
 

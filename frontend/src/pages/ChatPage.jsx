@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, cloneElement, isValidElement, Children } from 'react';
 import { Send, ChevronDown, ChevronUp, FileText, Sparkles, Database, Loader2 } from 'lucide-react';
 import Markdown from 'react-markdown';
 import { chatFdkbStream, getRagStatus, buildRagIndex } from '../lib/api';
@@ -55,14 +55,13 @@ function CitationLinker({ children, sources, onOpenDoc }) {
         );
       });
     }
-    if (!node?.props?.children) return node;
-    const newChildren = Array.isArray(node.props.children)
-      ? node.props.children.map(processNode)
-      : processNode(node.props.children);
-    return { ...node, props: { ...node.props, children: newChildren } };
+    if (!isValidElement(node)) return node;
+    const nodeChildren = node.props.children;
+    if (!nodeChildren) return node;
+    const newChildren = Children.map(nodeChildren, processNode);
+    return cloneElement(node, {}, ...newChildren);
   }
-  const processed = Array.isArray(children) ? children.map(processNode) : processNode(children);
-  return <>{processed}</>;
+  return <>{Children.map(children, processNode)}</>;
 }
 
 function formatDate(iso) {

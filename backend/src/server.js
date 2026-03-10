@@ -726,7 +726,7 @@ app.post('/api/chat', requireAuth, async (req, res) => {
 // --------------- FDKB Cross-Document Chat ---------------
 
 app.post('/api/chat/fdkb', requireAuth, async (req, res) => {
-  const { messages, model, nodeIds, folder } = req.body;
+  const { messages, model, nodeIds, folder, folderNodeId } = req.body;
   if (!messages || !Array.isArray(messages)) {
     return res.status(400).json({ error: 'messages array required' });
   }
@@ -745,15 +745,15 @@ app.post('/api/chat/fdkb', requireAuth, async (req, res) => {
     const latestQuestion = messages[messages.length - 1]?.content || '';
     res.write(`data: ${JSON.stringify({ type: 'status', message: 'Searching knowledge base...' })}\n\n`);
 
-    // Resolve folder name to nodeIds if provided (e.g., "12.1" filters to docs starting with "12.1.")
+    // Resolve folder scope — folderNodeId (DB path lookup) takes precedence over folder (name prefix)
     let resolvedNodeIds = nodeIds || null;
-    if (folder && !resolvedNodeIds) {
+    if (!folderNodeId && folder && !resolvedNodeIds) {
       resolvedNodeIds = cccResults
         .filter(d => !d.error && d.name.startsWith(folder))
         .map(d => d.nodeId);
     }
 
-    const chunks = await retrieveAcrossDocs(latestQuestion, bedrockClient, cccResults, { nodeIds: resolvedNodeIds });
+    const chunks = await retrieveAcrossDocs(latestQuestion, bedrockClient, cccResults, { nodeIds: resolvedNodeIds, folderNodeId });
 
     // Build source documents list (deduplicated, ordered by best score)
     const sourcesMap = new Map();
@@ -907,12 +907,30 @@ app.post('/api/rag/build-index', requireAuth, async (req, res) => {
       send({ type: 'progress', current, total: docs.length, name: doc.name, indexed, skipped, errors });
 
       try {
-        const pdfResp = await alfrescoFetch(
-          `${SHARE_API_PROXY}/alfresco/versions/1/nodes/${doc.nodeId}/content`,
-          session
-        );
+        // Fetch PDF content and node path info in parallel
+        const [pdfResp, nodeResp] = await Promise.all([
+          alfrescoFetch(
+            `${SHARE_API_PROXY}/alfresco/versions/1/nodes/${doc.nodeId}/content`,
+            session
+          ),
+          alfrescoFetch(
+            `${SHARE_API_PROXY}/alfresco/versions/1/nodes/${doc.nodeId}?include=path`,
+            session
+          ),
+        ]);
         if (!pdfResp.ok) throw new Error(`Fetch failed: ${pdfResp.status}`);
         const pdfBuffer = Buffer.from(await pdfResp.arrayBuffer());
+
+        // Extract folder ancestry from node path
+        let folderNodeId = null, folderPath = null;
+        try {
+          const nodeData = await nodeResp.json();
+          const pathElements = nodeData?.entry?.path?.elements || [];
+          if (pathElements.length > 0) {
+            folderNodeId = pathElements[pathElements.length - 1].id;
+            folderPath = pathElements.map(el => el.id).join('|');
+          }
+        } catch (_) { /* path fetch failed — continue without folder info */ }
 
         const text = await extractTextFromPdf(pdfBuffer, scriptPath);
 
@@ -924,7 +942,7 @@ app.post('/api/rag/build-index', requireAuth, async (req, res) => {
         const chunks = chunkDocument(text);
         const embeddings = await embedChunks(chunks, bedrockClient);
         const modifiedAt = doc.publicationDate || 'unknown';
-        saveToDB(doc.nodeId, doc.name, modifiedAt, { chunks, embeddings });
+        saveToDB(doc.nodeId, doc.name, modifiedAt, { chunks, embeddings }, { folderNodeId, folderPath });
         indexed++;
       } catch (err) {
         console.error(`[rag-build] Error on ${doc.name}:`, err.message);

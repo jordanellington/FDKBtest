@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { useLocation } from 'react-router-dom';
 import { Send, ChevronDown, ChevronUp, FileText, Sparkles, Database, Loader2 } from 'lucide-react';
 import Markdown from 'react-markdown';
 import { chatFdkbStream, getRagStatus, buildRagIndex } from '../lib/api';
@@ -72,6 +73,10 @@ const SUGGESTIONS = [
 ];
 
 export default function ChatPage() {
+  const location = useLocation();
+  const folderNodeId = location.state?.folderNodeId || null;
+  const folderName = location.state?.folderName || null;
+
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [streaming, setStreaming] = useState(false);
@@ -128,6 +133,7 @@ export default function ChatPage() {
 
     await chatFdkbStream(newMessages, {
       model,
+      folderNodeId,
       onDelta: (delta) => {
         accumulated += delta;
         setMessages(prev => {

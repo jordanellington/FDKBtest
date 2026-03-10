@@ -240,14 +240,16 @@ export async function chatStream(messages, doc, onDelta, onDone, onError, onStat
   }
 }
 
-export async function chatFdkbStream(messages, { onDelta, onDone, onError, onStatus, onSources, model }) {
+export async function chatFdkbStream(messages, { onDelta, onDone, onError, onStatus, onSources, model, folderNodeId }) {
+  const body = { messages, model };
+  if (folderNodeId) body.folderNodeId = folderNodeId;
   const resp = await fetch(`${API_URL}/api/chat/fdkb`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'x-session-id': sessionId || '',
     },
-    body: JSON.stringify({ messages, model }),
+    body: JSON.stringify(body),
   });
 
   if (resp.status === 401) {

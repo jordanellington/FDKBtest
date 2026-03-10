@@ -138,8 +138,8 @@ export function dotProduct(a, b) {
 /**
  * Save document chunks and embeddings to SQLite.
  */
-export function saveToDB(nodeId, name, modifiedAt, entry) {
-  const docId = db.upsertDoc(nodeId, name, modifiedAt);
+export function saveToDB(nodeId, name, modifiedAt, entry, { folderNodeId, folderPath } = {}) {
+  const docId = db.upsertDoc(nodeId, name, modifiedAt, folderNodeId || null, folderPath || null);
   db.insertChunks(docId, entry.chunks, entry.embeddings);
 }
 
@@ -272,15 +272,21 @@ const CROSS_DOC_K = 10;
 /**
  * Retrieve the most relevant chunks across all indexed documents.
  */
-export async function retrieveAcrossDocs(question, bedrockClient, cccResults, { nodeIds } = {}) {
-  const corpus = getCorpusIndex();
-  if (!corpus || corpus.entries.length === 0) {
-    throw new Error('No documents indexed. Use the Build Index button first.');
-  }
+export async function retrieveAcrossDocs(question, bedrockClient, cccResults, { nodeIds, folderNodeId } = {}) {
+  let searchEntries;
 
-  const searchEntries = nodeIds
-    ? corpus.entries.filter(e => nodeIds.includes(e.docId))
-    : corpus.entries;
+  if (folderNodeId) {
+    // Load only embeddings for docs within this folder (any depth)
+    searchEntries = db.loadEmbeddingsByFolder(folderNodeId);
+  } else {
+    const corpus = getCorpusIndex();
+    if (!corpus || corpus.entries.length === 0) {
+      throw new Error('No documents indexed. Use the Build Index button first.');
+    }
+    searchEntries = nodeIds
+      ? corpus.entries.filter(e => nodeIds.includes(e.docId))
+      : corpus.entries;
+  }
 
   if (searchEntries.length === 0) {
     throw new Error('No matching documents found in index for the given filter.');

@@ -36,15 +36,21 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_chunks_doc ON chunks(doc_id);
 `);
 
+// Schema migrations — add folder ancestry columns (idempotent)
+try { db.exec('ALTER TABLE documents ADD COLUMN folder_node_id TEXT DEFAULT NULL'); } catch (_) {}
+try { db.exec('ALTER TABLE documents ADD COLUMN folder_path TEXT DEFAULT NULL'); } catch (_) {}
+
 // Prepared statements
 const stmts = {
   upsertDoc: db.prepare(`
-    INSERT INTO documents (node_id, name, modified_at, cached_at)
-    VALUES (@nodeId, @name, @modifiedAt, @cachedAt)
+    INSERT INTO documents (node_id, name, modified_at, cached_at, folder_node_id, folder_path)
+    VALUES (@nodeId, @name, @modifiedAt, @cachedAt, @folderNodeId, @folderPath)
     ON CONFLICT(node_id) DO UPDATE SET
       name = @name,
       modified_at = @modifiedAt,
-      cached_at = @cachedAt
+      cached_at = @cachedAt,
+      folder_node_id = @folderNodeId,
+      folder_path = @folderPath
     RETURNING id
   `),
 
@@ -77,6 +83,14 @@ const stmts = {
     ORDER BY d.id, c.seq
   `),
 
+  loadEmbeddingsByFolder: db.prepare(`
+    SELECT c.text, c.page, c.section_header, c.embedding, d.node_id, d.name
+    FROM chunks c
+    JOIN documents d ON c.doc_id = d.id
+    WHERE d.folder_path LIKE '%' || @folderNodeId || '%'
+    ORDER BY d.id, c.seq
+  `),
+
   clearAll: db.prepare('DELETE FROM documents'),
 };
 
@@ -98,8 +112,8 @@ const insertChunksTransaction = db.transaction((docId, chunks, embeddings) => {
 
 export default {
   /** Upsert a document and return its rowid */
-  upsertDoc(nodeId, name, modifiedAt) {
-    const row = stmts.upsertDoc.get({ nodeId, name, modifiedAt, cachedAt: Date.now() });
+  upsertDoc(nodeId, name, modifiedAt, folderNodeId = null, folderPath = null) {
+    const row = stmts.upsertDoc.get({ nodeId, name, modifiedAt, cachedAt: Date.now(), folderNodeId, folderPath });
     return row.id;
   },
 
@@ -139,6 +153,19 @@ export default {
       ? stmts.loadFilteredEmbeddings.all(JSON.stringify(nodeIds))
       : stmts.loadAllEmbeddings.all();
 
+    return rows.map(row => ({
+      text: row.text,
+      page: row.page,
+      sectionHeader: row.section_header,
+      embedding: new Float32Array(row.embedding.buffer, row.embedding.byteOffset, row.embedding.byteLength / 4),
+      docId: row.node_id,
+      docName: row.name,
+    }));
+  },
+
+  /** Load embeddings filtered by folder ancestry */
+  loadEmbeddingsByFolder(folderNodeId) {
+    const rows = stmts.loadEmbeddingsByFolder.all({ folderNodeId });
     return rows.map(row => ({
       text: row.text,
       page: row.page,

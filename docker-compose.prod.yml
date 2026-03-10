@@ -12,7 +12,7 @@ services:
       - AWS_BEDROCK_REGION=${AWS_BEDROCK_REGION:-us-east-1}
       - AWS_BEDROCK_MODEL_ID=${AWS_BEDROCK_MODEL_ID:-us.anthropic.claude-haiku-4-5-20251001-v1:0}
     volumes:
-      - ./data/rag-cache:/app/data/rag-cache
+      - ./data:/app/data
     restart: unless-stopped
 
   frontend:

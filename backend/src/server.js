@@ -23,9 +23,10 @@ function extractTextFromPdf(pdfBuffer, scriptPath, timeout = 120000) {
     proc.stdin.end();
   });
 }
-import { readFileSync, existsSync, readdirSync, unlinkSync } from 'fs';
+import { readFileSync, existsSync } from 'fs';
 import { BedrockRuntimeClient, InvokeModelWithResponseStreamCommand } from '@aws-sdk/client-bedrock-runtime';
-import { getOrBuildCache, retrieveChunks, isCached, retrieveAcrossDocs, getCorpusIndex, chunkDocument, embedChunks, getCachePath, saveToDisk, loadCorpusIndex } from './rag.js';
+import { getOrBuildCache, retrieveChunks, isCached, isIndexed, retrieveAcrossDocs, getCorpusIndex, chunkDocument, embedChunks, saveToDB, loadCorpusIndex, getDocCount, migrateJsonToSqlite } from './rag.js';
+import db from './db.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -786,7 +787,7 @@ app.post('/api/chat/fdkb', requireAuth, async (req, res) => {
       `[Source: ${c.docName}, p.${c.page}${c.sectionHeader ? ', ' + c.sectionHeader : ''}]\n${c.text}`
     ).join('\n\n---\n\n');
 
-    const corpus = getCorpusIndex(cccResults);
+    const corpus = getCorpusIndex();
     const docCount = corpus?.docCount || 0;
 
     const systemPrompt = `You are a knowledgeable assistant for Covington & Burling's Food & Drug Knowledge Base (FDKB). You have access to a corpus of ${docCount} indexed documents covering FDA policy, biotech regulation, cloning legislation, and related topics.
@@ -843,15 +844,11 @@ CITATION RULES:
 
 // --------------- RAG Index Management ---------------
 
-const CACHE_DIR = path.join(__dirname, '../data/rag-cache');
-
 app.get('/api/rag/status', requireAuth, (req, res) => {
   try {
-    const cacheFiles = existsSync(CACHE_DIR)
-      ? readdirSync(CACHE_DIR).filter(f => f.endsWith('.json'))
-      : [];
+    const indexed = getDocCount();
     const totalDocs = cccResults.filter(d => !d.error).length;
-    res.json({ indexed: cacheFiles.length, total: totalDocs });
+    res.json({ indexed, total: totalDocs });
   } catch (err) {
     res.json({ indexed: 0, total: 0 });
   }
@@ -878,12 +875,10 @@ app.post('/api/rag/build-index', requireAuth, async (req, res) => {
 
   // Clear existing cache if requested
   const { clearExisting } = req.body || {};
-  if (clearExisting && existsSync(CACHE_DIR)) {
-    const files = readdirSync(CACHE_DIR).filter(f => f.endsWith('.json'));
-    for (const f of files) {
-      try { unlinkSync(path.join(CACHE_DIR, f)); } catch {}
-    }
-    send({ type: 'status', message: `Cleared ${files.length} cached files` });
+  if (clearExisting) {
+    const prevCount = getDocCount();
+    db.clearAll();
+    send({ type: 'status', message: `Cleared ${prevCount} cached documents` });
   }
 
   const docs = cccResults.filter(d => !d.error);
@@ -896,18 +891,12 @@ app.post('/api/rag/build-index', requireAuth, async (req, res) => {
   try {
     send({ type: 'status', message: `Starting index build for ${docs.length} documents...` });
 
-    // Filter out already-cached docs first
+    // Filter out already-indexed docs
     const toProcess = [];
     for (const doc of docs) {
-      const cachePath = getCachePath(doc.nodeId);
-      if (existsSync(cachePath)) {
-        try {
-          const data = JSON.parse(readFileSync(cachePath, 'utf8'));
-          if (data.chunks?.length > 0 && data.embeddings?.length > 0) {
-            skipped++;
-            continue;
-          }
-        } catch {}
+      if (isIndexed(doc.nodeId)) {
+        skipped++;
+        continue;
       }
       toProcess.push(doc);
     }
@@ -939,7 +928,7 @@ app.post('/api/rag/build-index', requireAuth, async (req, res) => {
         const chunks = chunkDocument(text);
         const embeddings = await embedChunks(chunks, bedrockClient);
         const modifiedAt = doc.publicationDate || 'unknown';
-        saveToDisk(doc.nodeId, modifiedAt, { chunks, embeddings, cachedAt: Date.now() });
+        saveToDB(doc.nodeId, doc.name, modifiedAt, { chunks, embeddings });
         indexed++;
       } catch (err) {
         console.error(`[rag-build] Error on ${doc.name}:`, err.message);
@@ -948,7 +937,7 @@ app.post('/api/rag/build-index', requireAuth, async (req, res) => {
     }
 
     // Reload corpus index with new data
-    loadCorpusIndex(cccResults);
+    loadCorpusIndex();
 
     send({ type: 'complete', indexed, skipped, errors, total: docs.length });
     res.end();
@@ -963,4 +952,10 @@ app.post('/api/rag/build-index', requireAuth, async (req, res) => {
 
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`FDKB Navigator backend running on port ${PORT}`);
+
+  // One-time migration: import old JSON cache files into SQLite if DB is empty
+  migrateJsonToSqlite(cccResults);
+
+  // Pre-load corpus index from SQLite
+  loadCorpusIndex();
 });

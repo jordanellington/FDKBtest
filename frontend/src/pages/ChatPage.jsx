@@ -84,7 +84,7 @@ export default function ChatPage() {
         accumulated += delta;
         setMessages(prev => {
           const updated = [...prev];
-          updated[updated.length - 1] = { ...updated[updated.length - 1], content: accumulated, streaming: true };
+          updated[updated.length - 1] = { ...updated[updated.length - 1], content: accumulated, streaming: true, status: false };
           return updated;
         });
       },
@@ -145,7 +145,7 @@ export default function ChatPage() {
           className="flex-1 overflow-y-auto"
           style={{ minHeight: 0 }}
         >
-          <div style={{ maxWidth: 720, margin: '0 auto', padding: '32px 24px' }}>
+          <div style={{ maxWidth: 900, margin: '0 auto', padding: '32px 24px' }}>
             {messages.length === 0 ? (
               <WelcomeScreen
                 onSend={sendMessage}
@@ -182,7 +182,7 @@ export default function ChatPage() {
 
         {/* Input bar */}
         <div style={{ borderTop: '1px solid var(--color-border)', background: 'var(--color-bg-secondary)' }}>
-          <div style={{ maxWidth: 720, margin: '0 auto', padding: '16px 24px 12px' }}>
+          <div style={{ maxWidth: 900, margin: '0 auto', padding: '16px 24px 12px' }}>
             <form onSubmit={handleSubmit}>
               <div
                 style={{
@@ -515,7 +515,7 @@ function MessageBubble({ msg, onOpenDoc }) {
 
       {/* Source document cards — shown after response is done */}
       {!msg.streaming && msg.sources && msg.sources.length > 0 && (
-        <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 6 }}>
+        <div style={{ marginTop: 12, display: 'flex', flexWrap: 'wrap', gap: 6 }}>
           {msg.sources.map((src, i) => (
             <SourceCard key={i} source={src} onClick={() => onOpenDoc(src)} />
           ))}
@@ -530,43 +530,35 @@ function SourceCard({ source, onClick }) {
   const title = source.displayTitle && source.displayTitle !== source.name
     ? source.displayTitle
     : source.name;
-  // Truncate long titles
-  const displayTitle = title.length > 80 ? title.slice(0, 77) + '...' : title;
+  const displayTitle = title.length > 60 ? title.slice(0, 57) + '...' : title;
 
   return (
     <button
       onClick={onClick}
       style={{
-        display: 'flex',
+        display: 'inline-flex',
         alignItems: 'center',
-        gap: 10,
-        padding: '10px 12px',
+        gap: 6,
+        padding: '5px 10px',
         background: 'var(--color-bg-elevated)',
         border: '1px solid var(--color-border-mid)',
-        borderRadius: 8,
+        borderRadius: 6,
         cursor: 'pointer',
         textAlign: 'left',
-        width: '100%',
         transition: 'border-color 0.15s',
         fontFamily: 'var(--font-body)',
       }}
       onMouseEnter={(e) => e.currentTarget.style.borderColor = 'var(--color-border-strong)'}
       onMouseLeave={(e) => e.currentTarget.style.borderColor = 'var(--color-border-mid)'}
     >
-      <FileText size={16} style={{ color: 'var(--color-text-muted)', flexShrink: 0 }} />
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: 13, color: 'var(--color-text-primary)', fontWeight: 500 }}>
-          {displayTitle}
-        </div>
-        <div style={{ fontSize: 11, color: 'var(--color-text-muted)', marginTop: 2 }}>
-          {source.publicationTitle || source.publisher || source.name}
-          {source.page ? ` · Page ${source.page}` : ''}
-        </div>
-      </div>
+      <FileText size={12} style={{ color: 'var(--color-text-muted)', flexShrink: 0 }} />
+      <span style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>
+        {displayTitle}
+      </span>
       {source.distroLevel && (
         <div style={{
-          width: 8,
-          height: 8,
+          width: 6,
+          height: 6,
           borderRadius: '50%',
           background: badgeColor,
           flexShrink: 0,

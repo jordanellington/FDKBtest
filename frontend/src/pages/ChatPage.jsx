@@ -522,7 +522,7 @@ function MessageBubble({ msg, onOpenDoc }) {
               padding: 0,
             }}
           >
-            Searched {msg.sources.length} document{msg.sources.length !== 1 ? 's' : ''}
+            {msg.sources.length} source{msg.sources.length !== 1 ? 's' : ''} found
             {sourcesExpanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
           </button>
           {sourcesExpanded && (

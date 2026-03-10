@@ -641,12 +641,21 @@ function MessageBubble({ msg, onOpenDoc }) {
         )}
       </div>
 
-      {/* Source document cards — shown after response is done */}
+      {/* Source document list — shown after response is done */}
       {!msg.streaming && msg.sources && msg.sources.length > 0 && (
-        <div style={{ marginTop: 12, display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-          {msg.sources.map((src, i) => (
-            <SourceCard key={i} source={src} onClick={() => onOpenDoc(src)} />
-          ))}
+        <div style={{ marginTop: 16 }}>
+          <div style={{
+            fontSize: 10, fontWeight: 600, textTransform: 'uppercase',
+            letterSpacing: '0.06em', color: 'var(--color-text-muted)',
+            marginBottom: 6,
+          }}>
+            Sources
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            {msg.sources.map((src, i) => (
+              <SourceCard key={i} source={src} onClick={() => onOpenDoc(src)} />
+            ))}
+          </div>
         </div>
       )}
     </div>
@@ -657,7 +666,6 @@ function SourceCard({ source, onClick }) {
   const title = source.displayTitle && source.displayTitle !== source.name
     ? source.displayTitle
     : source.name;
-  const displayTitle = title.length > 50 ? title.slice(0, 47) + '...' : title;
   const pub = source.publicationTitle;
   const date = formatDate(source.publicationDate);
   const meta = [pub, date].filter(Boolean).join(' · ');
@@ -666,34 +674,39 @@ function SourceCard({ source, onClick }) {
     <button
       onClick={onClick}
       style={{
-        display: 'inline-flex',
+        display: 'flex',
         alignItems: 'center',
-        gap: 6,
-        padding: '4px 10px',
-        background: 'var(--color-bg-elevated)',
-        border: '1px solid var(--color-border-mid)',
+        gap: 8,
+        padding: '6px 10px',
+        background: 'transparent',
+        border: 'none',
         borderRadius: 6,
         cursor: 'pointer',
         textAlign: 'left',
-        transition: 'border-color 0.15s',
+        transition: 'background 0.15s',
         fontFamily: 'var(--font-body)',
         textDecoration: 'none',
-        maxWidth: 360,
+        width: '100%',
       }}
-      onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--color-accent)'; }}
-      onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--color-border-mid)'; }}
+      onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--color-bg-secondary)'; }}
+      onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
     >
-      <FileText size={12} style={{ color: 'var(--color-accent)', flexShrink: 0 }} />
-      <span style={{ overflow: 'hidden', minWidth: 0 }}>
-        <span style={{ display: 'block', fontSize: 11, color: 'var(--color-text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-          {displayTitle}
-        </span>
-        {meta && (
-          <span style={{ display: 'block', fontSize: 10, color: 'var(--color-text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-            {meta}
-          </span>
-        )}
+      <FileText size={13} style={{ color: 'var(--color-accent)', flexShrink: 0 }} />
+      <span style={{
+        fontSize: 12, color: 'var(--color-text-primary)',
+        whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+        flex: 1, minWidth: 0,
+      }}>
+        {title}
       </span>
+      {meta && (
+        <span style={{
+          fontSize: 11, color: 'var(--color-text-muted)',
+          whiteSpace: 'nowrap', flexShrink: 0,
+        }}>
+          {meta}
+        </span>
+      )}
     </button>
   );
 }

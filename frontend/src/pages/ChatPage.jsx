@@ -143,7 +143,7 @@ export default function ChatPage() {
   return (
     <div className="flex h-full overflow-hidden">
       {/* Chat pane */}
-      <div className="flex flex-col flex-1 min-w-0" style={{ background: 'var(--color-bg-primary)' }}>
+      <div className="flex flex-col min-w-0" style={{ background: 'var(--color-bg-primary)', flex: viewerDoc ? '0 0 40%' : '1 1 100%', minWidth: viewerDoc ? 380 : undefined }}>
         {/* Messages area */}
         <div
           ref={scrollRef}
@@ -255,7 +255,7 @@ export default function ChatPage() {
 
       {/* Document viewer pane */}
       {viewerDoc && (
-        <div style={{ width: '50%', minWidth: 400, borderLeft: '1px solid var(--color-border)' }}>
+        <div style={{ flex: 1, minWidth: 400, borderLeft: '1px solid var(--color-border)' }}>
           <DocumentViewer
             document={viewerDoc}
             onClose={() => setViewerDoc(null)}

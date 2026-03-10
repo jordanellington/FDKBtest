@@ -875,7 +875,7 @@ app.post('/api/rag/build-index', requireAuth, async (req, res) => {
 
   const docs = cccResults.filter(d => !d.error);
   const session = req.session;
-  const ALFRESCO_API_URL = `${ALFRESCO_BASE}/share/proxy/alfresco-api/-default-/public`;
+  const SHARE_API_PROXY = `${ALFRESCO_BASE}/share/proxy/alfresco-api/-default-/public`;
 
   let indexed = 0, skipped = 0, errors = 0;
 
@@ -900,9 +900,9 @@ app.post('/api/rag/build-index', requireAuth, async (req, res) => {
       try {
         send({ type: 'progress', current: i + 1, total: docs.length, name: doc.name, indexed, skipped, errors });
 
-        // Fetch PDF using user's Alfresco session
+        // Fetch PDF using user's Alfresco session via Share proxy
         const pdfResp = await alfrescoFetch(
-          `${ALFRESCO_API}/alfresco/versions/1/nodes/${doc.nodeId}/content`,
+          `${SHARE_API_PROXY}/alfresco/versions/1/nodes/${doc.nodeId}/content`,
           session
         );
         if (!pdfResp.ok) throw new Error(`Fetch failed: ${pdfResp.status}`);

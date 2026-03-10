@@ -308,14 +308,7 @@ html.light .rpv-dark-theme .rpv-core__page-layer { box-shadow: 0 2px 8px rgba(0,
   .viewer-toolbar button { min-height: 36px !important; min-width: 36px !important; }
   .viewer-meta-bar { flex-wrap: wrap !important; gap: 8px !important; }
 }
-@media (min-width: 768px) {
-  .document-viewer-panel {
-    width: 728px;
-    max-width: 50%;
-    min-width: 340px;
-    flex: 0 1 auto;
-  }
-}
+/* Desktop viewer sizing is handled via inline styles in DocumentViewer.jsx */
 
 /* AiChat: full-screen on mobile, side panel on desktop */
 @media (max-width: 767px) {

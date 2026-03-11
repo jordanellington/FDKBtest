@@ -1,8 +1,8 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
-import { Send, ChevronDown, ChevronUp, FileText, Sparkles, Database, Loader2, Plus, X } from 'lucide-react';
+import { Send, ChevronDown, ChevronUp, FileText, Sparkles, Plus, X } from 'lucide-react';
 import Markdown from 'react-markdown';
-import { chatFdkbStream, getRagStatus, buildRagIndex } from '../lib/api';
+import { chatFdkbStream } from '../lib/api';
 import DocumentViewer from '../components/DocumentViewer';
 import ScopeNavigator from '../components/ScopeNavigator';
 
@@ -67,12 +67,6 @@ function formatDate(iso) {
   return d.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
 }
 
-const SUGGESTIONS = [
-  'What cloning legislation was proposed in 2001?',
-  'Which publications cover FDA\'s stance on biotech?',
-  'Summarize the key regulatory developments',
-];
-
 export default function ChatPage() {
   const location = useLocation();
   const [scope, setScope] = useState(() => {
@@ -88,9 +82,6 @@ export default function ChatPage() {
   const [streaming, setStreaming] = useState(false);
   const [model, setModel] = useState(() => localStorage.getItem('fdkb_chat_model') || 'haiku');
   const [viewerDoc, setViewerDoc] = useState(null);
-  const [indexStatus, setIndexStatus] = useState(null); // { indexed, total }
-  const [building, setBuilding] = useState(false);
-  const [buildProgress, setBuildProgress] = useState(null);
   const scrollRef = useRef(null);
   const inputRef = useRef(null);
   const userScrolledUp = useRef(false);
@@ -98,11 +89,6 @@ export default function ChatPage() {
   useEffect(() => {
     localStorage.setItem('fdkb_chat_model', model);
   }, [model]);
-
-  // Check RAG index status on mount
-  useEffect(() => {
-    getRagStatus().then(setIndexStatus).catch(() => {});
-  }, []);
 
   // Auto-scroll unless user scrolled up
   useEffect(() => {
@@ -194,178 +180,201 @@ export default function ChatPage() {
     }
   };
 
+  const isEmpty = messages.length === 0;
+
+  const inputBar = (
+    <div style={{ maxWidth: isEmpty ? 680 : 900, margin: '0 auto', width: '100%', padding: isEmpty ? '0 24px' : '16px 24px 12px' }}>
+      <form onSubmit={handleSubmit}>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            background: isEmpty ? 'var(--color-bg-elevated)' : 'var(--color-bg-primary)',
+            border: `1px solid var(--color-border${isEmpty ? '-mid' : '-mid'})`,
+            borderRadius: isEmpty ? 16 : 12,
+            padding: isEmpty ? '14px 18px' : '10px 14px',
+            position: 'relative',
+            boxShadow: isEmpty ? '0 2px 12px rgba(0,0,0,0.08)' : 'none',
+            transition: 'all 0.3s ease',
+          }}
+        >
+          {/* Scope tag or + Scope button */}
+          {scope ? (
+            <span style={{
+              display: 'inline-flex', alignItems: 'center', gap: 4,
+              padding: '3px 8px 3px 10px',
+              background: 'rgba(86, 191, 168, 0.1)',
+              border: '1px solid rgba(86, 191, 168, 0.25)',
+              borderRadius: 12,
+              fontSize: 11, fontWeight: 600,
+              color: 'var(--color-accent)',
+              whiteSpace: 'nowrap', flexShrink: 0,
+            }}>
+              {scope.folderName?.replace(/^[\d.]+ /, '') || 'Folder'}
+              <X
+                size={12}
+                style={{ cursor: 'pointer', opacity: 0.7 }}
+                onClick={() => setScope(null)}
+              />
+            </span>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setShowScopeNav(!showScopeNav)}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 3,
+                padding: '3px 9px',
+                background: 'transparent',
+                border: '1px dashed var(--color-border)',
+                borderRadius: 12,
+                fontSize: 11,
+                color: 'var(--color-text-muted)',
+                cursor: 'pointer',
+                whiteSpace: 'nowrap', flexShrink: 0,
+                transition: 'all 0.15s',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.borderColor = 'var(--color-accent)';
+                e.currentTarget.style.color = 'var(--color-accent)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.borderColor = 'var(--color-border)';
+                e.currentTarget.style.color = 'var(--color-text-muted)';
+              }}
+            >
+              <Plus size={11} />
+              Scope
+            </button>
+          )}
+
+          {/* Scope navigator popup */}
+          {showScopeNav && (
+            <ScopeNavigator
+              onSelect={(folderId, folderName) => {
+                setScope({ folderNodeId: folderId, folderName });
+                setShowScopeNav(false);
+              }}
+              onClose={() => setShowScopeNav(false)}
+            />
+          )}
+
+          <input
+            ref={inputRef}
+            type="text"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder={scope ? `Ask about ${scope.folderName?.replace(/^[\d.]+ /, '')}...` : (isEmpty ? 'How can I help you today?' : 'Reply...')}
+            disabled={streaming}
+            style={{
+              flex: 1,
+              background: 'transparent',
+              border: 'none',
+              outline: 'none',
+              fontSize: isEmpty ? 15 : 14,
+              color: 'var(--color-text-primary)',
+              fontFamily: 'var(--font-body)',
+            }}
+          />
+          <ModelSelector model={model} onChange={setModel} disabled={streaming} />
+          {input.trim() && (
+            <button
+              type="submit"
+              disabled={streaming}
+              style={{
+                background: 'var(--color-accent)',
+                border: 'none',
+                borderRadius: 8,
+                padding: '6px 8px',
+                cursor: streaming ? 'default' : 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                opacity: streaming ? 0.5 : 1,
+              }}
+            >
+              <Send size={14} style={{ color: 'var(--color-bg-primary)' }} />
+            </button>
+          )}
+        </div>
+      </form>
+      <p style={{
+        fontSize: 11,
+        color: 'var(--color-text-muted)',
+        textAlign: 'center',
+        marginTop: 8,
+        fontFamily: 'var(--font-body)',
+      }}>
+        Private AI for Covington &amp; Burling LLP. Conversations are confidential. Always verify responses.
+      </p>
+    </div>
+  );
+
   return (
     <div className="flex h-full overflow-hidden">
       {/* Chat pane */}
       <div className="flex flex-col min-w-0" style={{ background: 'var(--color-bg-primary)', width: viewerDoc ? '50%' : '100%', flex: 'none' }}>
-        {/* Messages area */}
-        <div
-          ref={scrollRef}
-          onScroll={handleScroll}
-          className="flex-1 overflow-y-auto"
-          style={{ minHeight: 0 }}
-        >
-          <div style={{ maxWidth: 900, margin: '0 auto', padding: '32px 24px' }}>
-            {messages.length === 0 ? (
-              <WelcomeScreen
-                onSend={sendMessage}
-                indexStatus={indexStatus}
-                building={building}
-                buildProgress={buildProgress}
-                onBuildIndex={(clearExisting) => {
-                  setBuilding(true);
-                  setBuildProgress(null);
-                  buildRagIndex(
-                    (progress) => setBuildProgress(progress),
-                    (result) => {
-                      setBuilding(false);
-                      setBuildProgress(null);
-                      setIndexStatus({ indexed: result.indexed + result.skipped, total: result.total });
-                    },
-                    (error) => {
-                      setBuilding(false);
-                      setBuildProgress({ type: 'error', message: error });
-                    },
-                    { clearExisting }
-                  );
-                }}
-              />
-            ) : (
-              <div className="flex flex-col gap-6">
-                {messages.map((msg, i) => (
-                  <MessageBubble key={i} msg={msg} onOpenDoc={openDoc} />
-                ))}
-              </div>
-            )}
+
+        {isEmpty ? (
+          /* ── Empty state: everything centered vertically ── */
+          <div style={{
+            flex: 1,
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center',
+            alignItems: 'center',
+            minHeight: 0,
+            padding: '0 24px',
+            /* nudge up so content sits optically centered */
+            marginTop: '-8vh',
+          }}>
+            <div style={{ textAlign: 'center', maxWidth: 680 }}>
+              <Sparkles size={28} style={{ color: 'var(--color-accent-gold)', margin: '0 auto 12px' }} />
+              <h2 style={{
+                fontFamily: 'var(--font-display)',
+                fontSize: 28,
+                fontWeight: 400,
+                color: 'var(--color-text-primary)',
+                marginBottom: 8,
+              }}>
+                Ask anything about the FDKB
+              </h2>
+              <p style={{
+                fontSize: 14,
+                color: 'var(--color-text-secondary)',
+                maxWidth: 420,
+                margin: '0 auto',
+                lineHeight: 1.6,
+              }}>
+                Search across hundreds of FDA, biotech, and regulatory documents. Responses include citations to source documents.
+              </p>
+            </div>
+            <div style={{ width: '100%', marginTop: 32 }}>
+              {inputBar}
+            </div>
           </div>
-        </div>
-
-        {/* Input bar */}
-        <div style={{ borderTop: '1px solid var(--color-border)', background: 'var(--color-bg-secondary)' }}>
-          <div style={{ maxWidth: 900, margin: '0 auto', padding: '16px 24px 12px' }}>
-            <form onSubmit={handleSubmit}>
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 8,
-                  background: 'var(--color-bg-primary)',
-                  border: '1px solid var(--color-border-mid)',
-                  borderRadius: 12,
-                  padding: '10px 14px',
-                  position: 'relative',
-                }}
-              >
-                {/* Scope tag or + Scope button */}
-                {scope ? (
-                  <span style={{
-                    display: 'inline-flex', alignItems: 'center', gap: 4,
-                    padding: '3px 8px 3px 10px',
-                    background: 'rgba(86, 191, 168, 0.1)',
-                    border: '1px solid rgba(86, 191, 168, 0.25)',
-                    borderRadius: 12,
-                    fontSize: 11, fontWeight: 600,
-                    color: 'var(--color-accent)',
-                    whiteSpace: 'nowrap', flexShrink: 0,
-                  }}>
-                    {scope.folderName?.replace(/^[\d.]+ /, '') || 'Folder'}
-                    <X
-                      size={12}
-                      style={{ cursor: 'pointer', opacity: 0.7 }}
-                      onClick={() => setScope(null)}
-                    />
-                  </span>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => setShowScopeNav(!showScopeNav)}
-                    style={{
-                      display: 'inline-flex', alignItems: 'center', gap: 3,
-                      padding: '3px 9px',
-                      background: 'transparent',
-                      border: '1px dashed var(--color-border)',
-                      borderRadius: 12,
-                      fontSize: 11,
-                      color: 'var(--color-text-muted)',
-                      cursor: 'pointer',
-                      whiteSpace: 'nowrap', flexShrink: 0,
-                      transition: 'all 0.15s',
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.borderColor = 'var(--color-accent)';
-                      e.currentTarget.style.color = 'var(--color-accent)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.borderColor = 'var(--color-border)';
-                      e.currentTarget.style.color = 'var(--color-text-muted)';
-                    }}
-                  >
-                    <Plus size={11} />
-                    Scope
-                  </button>
-                )}
-
-                {/* Scope navigator popup */}
-                {showScopeNav && (
-                  <ScopeNavigator
-                    onSelect={(folderId, folderName) => {
-                      setScope({ folderNodeId: folderId, folderName });
-                      setShowScopeNav(false);
-                    }}
-                    onClose={() => setShowScopeNav(false)}
-                  />
-                )}
-
-                <input
-                  ref={inputRef}
-                  type="text"
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  onKeyDown={handleKeyDown}
-                  placeholder={scope ? `Ask about ${scope.folderName?.replace(/^[\d.]+ /, '')}...` : 'Reply...'}
-                  disabled={streaming}
-                  style={{
-                    flex: 1,
-                    background: 'transparent',
-                    border: 'none',
-                    outline: 'none',
-                    fontSize: 14,
-                    color: 'var(--color-text-primary)',
-                    fontFamily: 'var(--font-body)',
-                  }}
-                />
-                <ModelSelector model={model} onChange={setModel} disabled={streaming} />
-                {input.trim() && (
-                  <button
-                    type="submit"
-                    disabled={streaming}
-                    style={{
-                      background: 'var(--color-accent)',
-                      border: 'none',
-                      borderRadius: 8,
-                      padding: '6px 8px',
-                      cursor: streaming ? 'default' : 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      opacity: streaming ? 0.5 : 1,
-                    }}
-                  >
-                    <Send size={14} style={{ color: 'var(--color-bg-primary)' }} />
-                  </button>
-                )}
+        ) : (
+          /* ── Conversation state: messages scroll, input pinned to bottom ── */
+          <>
+            <div
+              ref={scrollRef}
+              onScroll={handleScroll}
+              className="flex-1 overflow-y-auto"
+              style={{ minHeight: 0 }}
+            >
+              <div style={{ maxWidth: 900, margin: '0 auto', padding: '32px 24px' }}>
+                <div className="flex flex-col gap-6">
+                  {messages.map((msg, i) => (
+                    <MessageBubble key={i} msg={msg} onOpenDoc={openDoc} />
+                  ))}
+                </div>
               </div>
-            </form>
-            <p style={{
-              fontSize: 11,
-              color: 'var(--color-text-muted)',
-              textAlign: 'center',
-              marginTop: 8,
-              fontFamily: 'var(--font-body)',
-            }}>
-              Private AI for Covington &amp; Burling LLP. Conversations are confidential. Always verify responses.
-            </p>
-          </div>
-        </div>
+            </div>
+            <div style={{ borderTop: '1px solid var(--color-border)', background: 'var(--color-bg-secondary)' }}>
+              {inputBar}
+            </div>
+          </>
+        )}
       </div>
 
       {/* Document viewer pane */}
@@ -383,148 +392,6 @@ export default function ChatPage() {
 }
 
 // ── Sub-components ──────────────────────────────────────────────────────────
-
-function WelcomeScreen({ onSend, indexStatus, building, buildProgress, onBuildIndex }) {
-  const hasIndex = indexStatus && indexStatus.indexed > 0;
-
-  return (
-    <div style={{ paddingTop: '12vh', textAlign: 'center' }}>
-      <div style={{ marginBottom: 16 }}>
-        <Sparkles size={28} style={{ color: 'var(--color-accent-gold)', margin: '0 auto 12px' }} />
-        <h2 style={{
-          fontFamily: 'var(--font-display)',
-          fontSize: 28,
-          fontWeight: 400,
-          color: 'var(--color-text-primary)',
-          marginBottom: 8,
-        }}>
-          Ask anything about the FDKB
-        </h2>
-        <p style={{
-          fontSize: 14,
-          color: 'var(--color-text-secondary)',
-          maxWidth: 420,
-          margin: '0 auto',
-          lineHeight: 1.6,
-        }}>
-          Search across hundreds of FDA, biotech, and regulatory documents. Responses include citations to source documents.
-        </p>
-      </div>
-
-      {/* Index status / build button */}
-      <div style={{ margin: '24px auto', maxWidth: 420 }}>
-        {building ? (
-          <div style={{
-            background: 'var(--color-bg-elevated)',
-            border: '1px solid var(--color-border-mid)',
-            borderRadius: 10,
-            padding: '16px 20px',
-            textAlign: 'left',
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-              <Loader2 size={14} className="animate-spin" style={{ color: 'var(--color-accent)' }} />
-              <span style={{ fontSize: 13, color: 'var(--color-text-primary)', fontWeight: 500 }}>
-                Building RAG Index...
-              </span>
-            </div>
-            {buildProgress?.type === 'progress' && (
-              <>
-                <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginBottom: 6 }}>
-                  {buildProgress.current}/{buildProgress.total}: {buildProgress.name}
-                </div>
-                <div style={{
-                  height: 4,
-                  background: 'var(--color-bg-primary)',
-                  borderRadius: 2,
-                  overflow: 'hidden',
-                }}>
-                  <div style={{
-                    height: '100%',
-                    width: `${(buildProgress.current / buildProgress.total) * 100}%`,
-                    background: 'var(--color-accent)',
-                    borderRadius: 2,
-                    transition: 'width 0.3s',
-                  }} />
-                </div>
-                <div style={{ fontSize: 11, color: 'var(--color-text-muted)', marginTop: 6 }}>
-                  {buildProgress.indexed} indexed, {buildProgress.skipped} cached, {buildProgress.errors} errors
-                </div>
-              </>
-            )}
-            {buildProgress?.type === 'status' && (
-              <div style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>{buildProgress.message}</div>
-            )}
-            {buildProgress?.type === 'error' && (
-              <div style={{ fontSize: 12, color: 'var(--color-status-red)' }}>{buildProgress.message}</div>
-            )}
-          </div>
-        ) : (
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 12,
-          }}>
-            {indexStatus && (
-              <span style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>
-                {hasIndex
-                  ? `${indexStatus.indexed}/${indexStatus.total} documents indexed`
-                  : 'No RAG index found'}
-              </span>
-            )}
-            <button
-              onClick={() => onBuildIndex(hasIndex)}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 6,
-                background: hasIndex ? 'transparent' : 'var(--color-accent)',
-                color: hasIndex ? 'var(--color-accent)' : 'var(--color-bg-primary)',
-                border: hasIndex ? '1px solid var(--color-border-accent)' : 'none',
-                borderRadius: 8,
-                padding: '8px 14px',
-                fontSize: 12,
-                fontWeight: 500,
-                cursor: 'pointer',
-                fontFamily: 'var(--font-body)',
-              }}
-            >
-              <Database size={13} />
-              {hasIndex ? 'Rebuild Index' : 'Create RAG Index'}
-            </button>
-          </div>
-        )}
-      </div>
-
-      {/* Suggestion chips — only show if index exists */}
-      {hasIndex && (
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'center', marginTop: 20 }}>
-          {SUGGESTIONS.map((s) => (
-            <button
-              key={s}
-              onClick={() => onSend(s)}
-              style={{
-                background: 'var(--color-bg-elevated)',
-                border: '1px solid var(--color-border-mid)',
-                borderRadius: 10,
-                padding: '10px 16px',
-                fontSize: 13,
-                color: 'var(--color-text-secondary)',
-                cursor: 'pointer',
-                fontFamily: 'var(--font-body)',
-                transition: 'border-color 0.15s',
-              }}
-              onMouseEnter={(e) => e.target.style.borderColor = 'var(--color-border-strong)'}
-              onMouseLeave={(e) => e.target.style.borderColor = 'var(--color-border-mid)'}
-            >
-              {s}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
 
 function ModelSelector({ model, onChange, disabled }) {
   return (

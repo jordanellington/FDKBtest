@@ -562,99 +562,76 @@ export default function Browser() {
               {/* Files */}
               {files.length > 0 && (
                 <div>
-                  <p className="text-[10px] text-text-muted uppercase tracking-wider font-semibold" style={{ marginBottom: 16 }}>
-                    Documents ({pagination?.totalItems ? pagination.totalItems - folders.length : files.length})
-                  </p>
-                  <div>
-                    {files.map((file, i) => {
-                      const meta = extractMetadata(file);
-                      const pages = file.properties?.['eci:pages'] || '—';
-                      const size = file.content?.sizeInBytes
-                        ? file.content.sizeInBytes >= 1048576
-                          ? (file.content.sizeInBytes / 1048576).toFixed(2) + ' MB'
-                          : (file.content.sizeInBytes / 1024).toFixed(0) + ' KB'
-                        : '—';
-                      const modified = meta.cccEnriched ? meta.date : (file.modifiedAt ? new Date(file.modifiedAt).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : '—');
-                      const cls = classifyDocument(file);
-                      const bc = BADGE_CONFIG[cls.color] || BADGE_CONFIG.red;
-                      const isSelected = selectedDoc?.id === file.id;
+                  {files.map((file, i) => {
+                    const meta = extractMetadata(file);
+                    const pages = file.properties?.['eci:pages'] || '—';
+                    const modified = meta.cccEnriched ? meta.date : (file.modifiedAt ? new Date(file.modifiedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—');
+                    const cls = classifyDocument(file);
+                    const bc = BADGE_CONFIG[cls.color] || BADGE_CONFIG.red;
+                    const isSelected = selectedDoc?.id === file.id;
+                    const isNotCovered = cls.label === 'NOT COVERED';
+                    const source = meta.cccEnriched ? (meta.publicationTitle || meta.publisher) : meta.publisher;
 
-                      return (
-                        <motion.div
-                          key={file.id}
-                          initial={{ opacity: 0 }}
-                          animate={{ opacity: 1 }}
-                          transition={{ delay: i * 0.01 }}
-                          onClick={() => setSelectedDoc(file)}
-                          style={{
-                            padding: '12px 16px',
-                            borderRadius: 8,
-                            marginBottom: 4,
-                            cursor: 'pointer',
-                            border: isSelected ? '1px solid var(--color-border-mid)' : '1px solid transparent',
-                            background: isSelected ? 'var(--color-bg-elevated)' : 'transparent',
-                            transition: 'all 0.12s ease',
-                            position: 'relative',
-                          }}
-                          onMouseEnter={(e) => { if (!isSelected) e.currentTarget.style.background = 'var(--color-bg-secondary)'; }}
-                          onMouseLeave={(e) => { if (!isSelected) e.currentTarget.style.background = 'transparent'; }}
-                        >
-                          {isSelected && (
-                            <div style={{
-                              position: 'absolute', left: 0, top: 8, bottom: 8,
-                              width: 3, borderRadius: 2, background: 'var(--color-accent)',
-                            }} />
-                          )}
+                    return (
+                      <motion.div
+                        key={file.id}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ delay: i * 0.01 }}
+                        onClick={() => setSelectedDoc(file)}
+                        style={{
+                          padding: '14px 16px',
+                          cursor: 'pointer',
+                          borderBottom: '1px solid var(--color-border)',
+                          background: isSelected ? 'var(--color-bg-elevated)' : 'transparent',
+                          transition: 'all 0.12s ease',
+                          position: 'relative',
+                          borderLeft: isNotCovered ? '3px solid #c87a4e' : '3px solid transparent',
+                        }}
+                        onMouseEnter={(e) => { if (!isSelected) e.currentTarget.style.background = 'var(--color-bg-secondary)'; }}
+                        onMouseLeave={(e) => { if (!isSelected) e.currentTarget.style.background = isSelected ? 'var(--color-bg-elevated)' : 'transparent'; }}
+                      >
+                        {isSelected && (
+                          <div style={{
+                            position: 'absolute', left: 0, top: 8, bottom: 8,
+                            width: 3, borderRadius: 2, background: 'var(--color-accent)',
+                          }} />
+                        )}
 
-                          <div className="flex items-center" style={{ gap: 10, marginBottom: 5 }}>
-                            <FileText
-                              size={13}
-                              className="shrink-0"
-                              style={{ color: isSelected ? 'var(--color-accent)' : 'var(--color-text-muted)' }}
-                              strokeWidth={1.5}
-                            />
-                            <span style={{
-                              fontSize: 13, fontWeight: 600,
-                              color: isSelected ? 'var(--color-text-primary)' : 'var(--color-text-secondary)',
-                              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0, flex: 1,
-                            }} title={meta.displayTitle ? `${file.name}\n${meta.articleTitle}` : file.name}>
-                              {meta.displayTitle || file.name}
-                            </span>
-                            <span className="result-meta-pages" style={{ fontSize: 11, color: 'var(--color-text-muted)', fontVariantNumeric: 'tabular-nums', flexShrink: 0 }}>{pages} pg</span>
-                            <span className="result-meta-size" style={{ fontSize: 11, color: 'var(--color-text-muted)', fontVariantNumeric: 'tabular-nums', minWidth: 54, textAlign: 'right', flexShrink: 0 }}>{size}</span>
-                            <span className="result-meta-date" style={{ fontSize: 11, color: 'var(--color-text-muted)', fontVariantNumeric: 'tabular-nums', minWidth: 60, textAlign: 'right', flexShrink: 0 }}>{modified}</span>
-                          </div>
+                        <div className="flex items-center" style={{ gap: 12, marginBottom: 4 }}>
+                          <span style={{
+                            fontSize: 14, fontWeight: 600,
+                            color: isSelected ? 'var(--color-text-primary)' : 'var(--color-text-secondary)',
+                            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0, flex: 1,
+                          }} title={meta.displayTitle ? `${file.name}\n${meta.articleTitle}` : file.name}>
+                            {meta.displayTitle || file.name}
+                          </span>
+                          <span
+                            data-tooltip={cls.tooltip}
+                            className="inline-flex items-center"
+                            style={{
+                              fontSize: 9, fontWeight: 700,
+                              letterSpacing: '0.06em', textTransform: 'uppercase',
+                              padding: '3px 10px', borderRadius: 4,
+                              color: bc.color, background: bc.bg,
+                              flexShrink: 0,
+                            }}
+                          >
+                            {cls.label}
+                          </span>
+                        </div>
 
-                          <div className="flex items-center" style={{ paddingLeft: 23, gap: 10 }}>
-                            <span style={{
-                              fontSize: 11,
-                              color: isSelected ? 'var(--color-text-secondary)' : 'var(--color-text-muted)',
-                              whiteSpace: 'nowrap',
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                              minWidth: 0,
-                              flex: 1,
-                            }}>
-                              {meta.cccEnriched ? (meta.publicationTitle || meta.publisher) : meta.publisher}
-                            </span>
-                            <span
-                              data-tooltip={cls.tooltip}
-                              className="inline-flex items-center"
-                              style={{
-                                fontSize: 9, fontWeight: 700,
-                                letterSpacing: '0.06em', textTransform: 'uppercase',
-                                padding: '3px 10px', borderRadius: 4,
-                                color: bc.color, background: bc.bg,
-                                flexShrink: 0, marginLeft: 'auto',
-                              }}
-                            >
-                              {cls.label}
-                            </span>
-                          </div>
-                        </motion.div>
-                      );
-                    })}
-                  </div>
+                        <div className="flex items-center" style={{ gap: 6 }}>
+                          <span style={{
+                            fontSize: 12,
+                            color: 'var(--color-text-muted)',
+                          }}>
+                            {source}{source && pages !== '—' ? ' \u00A0\u00B7\u00A0 ' : ''}{pages !== '—' ? `${pages} pg` : ''}{(source || pages !== '—') && modified !== '—' ? ' \u00A0\u00B7\u00A0 ' : ''}{modified !== '—' ? modified : ''}
+                          </span>
+                        </div>
+                      </motion.div>
+                    );
+                  })}
                 </div>
               )}
 

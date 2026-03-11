@@ -215,14 +215,14 @@ export default function Browser() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.45 }}
                 className="page-section-hero"
-                style={{ padding: '8px 56px 0', marginBottom: 32 }}
+                style={{ padding: '8px 56px 0', marginBottom: 0 }}
               >
                 <h1 className="page-title font-body text-[24px] font-medium text-text-primary leading-[1.12] tracking-[-0.02em]"
-                  style={{ marginBottom: 14 }}>
+                  style={{ marginBottom: 0 }}>
                   {currentNode?.name}
                 </h1>
 
-                <div style={{ paddingBottom: 20, borderBottom: '1px solid var(--color-border)' }} />
+                <div style={{ paddingBottom: 14, borderBottom: '1px solid var(--color-border)' }} />
 
                 {/* Discover result confirmation */}
                 {discoverResult && (

@@ -183,19 +183,20 @@ export default function ChatPage() {
   const isEmpty = messages.length === 0;
 
   const inputBar = (
-    <div style={{ maxWidth: isEmpty ? 680 : 900, margin: '0 auto', width: '100%', padding: isEmpty ? '0 24px' : '16px 24px 12px' }}>
+    <div style={{ maxWidth: isEmpty ? 640 : 900, margin: '0 auto', width: '100%', padding: isEmpty ? '0 24px' : '16px 24px 12px' }}>
       <form onSubmit={handleSubmit}>
         <div
           style={{
             display: 'flex',
-            alignItems: 'center',
+            alignItems: isEmpty ? 'flex-end' : 'center',
             gap: 8,
             background: isEmpty ? 'var(--color-bg-elevated)' : 'var(--color-bg-primary)',
-            border: `1px solid var(--color-border${isEmpty ? '-mid' : '-mid'})`,
-            borderRadius: isEmpty ? 16 : 12,
-            padding: isEmpty ? '14px 18px' : '10px 14px',
+            border: `1px solid var(--color-border-mid)`,
+            borderRadius: isEmpty ? 24 : 12,
+            padding: isEmpty ? '20px 22px' : '10px 14px',
+            minHeight: isEmpty ? 80 : 'auto',
             position: 'relative',
-            boxShadow: isEmpty ? '0 2px 12px rgba(0,0,0,0.08)' : 'none',
+            boxShadow: isEmpty ? '0 4px 24px rgba(0,0,0,0.12)' : 'none',
             transition: 'all 0.3s ease',
           }}
         >
@@ -272,7 +273,7 @@ export default function ChatPage() {
               background: 'transparent',
               border: 'none',
               outline: 'none',
-              fontSize: isEmpty ? 15 : 14,
+              fontSize: isEmpty ? 16 : 14,
               color: 'var(--color-text-primary)',
               fontFamily: 'var(--font-body)',
             }}
@@ -325,14 +326,14 @@ export default function ChatPage() {
             alignItems: 'center',
             minHeight: 0,
             padding: '0 24px',
-            /* nudge up so content sits optically centered */
-            marginTop: '-8vh',
+            /* sit in upper-center like Claude's welcome */
+            marginTop: '-12vh',
           }}>
             <div style={{ textAlign: 'center', maxWidth: 680 }}>
               <Sparkles size={28} style={{ color: 'var(--color-accent-gold)', margin: '0 auto 12px' }} />
               <h2 style={{
                 fontFamily: 'var(--font-display)',
-                fontSize: 28,
+                fontSize: 32,
                 fontWeight: 400,
                 color: 'var(--color-text-primary)',
                 marginBottom: 8,
@@ -349,7 +350,7 @@ export default function ChatPage() {
                 Search across hundreds of FDA, biotech, and regulatory documents. Responses include citations to source documents.
               </p>
             </div>
-            <div style={{ width: '100%', marginTop: 32 }}>
+            <div style={{ width: '100%', marginTop: 40 }}>
               {inputBar}
             </div>
           </div>

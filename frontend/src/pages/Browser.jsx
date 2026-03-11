@@ -180,18 +180,7 @@ export default function Browser() {
                 className="page-section-hero"
                 style={{ padding: '8px 56px 0', marginBottom: 32 }}
               >
-                {(() => {
-                  const els = currentNode?.path?.elements || [];
-                  const dlIdx = els.findIndex(e => e.name === 'documentlibrary');
-                  const vis = dlIdx >= 0 ? els.slice(dlIdx + 1) : els;
-                  const parentName = vis.length >= 2 ? vis[vis.length - 1]?.name : null;
-                  return parentName ? (
-                    <p className="text-[11px] font-semibold tracking-[0.1em] text-text-muted uppercase" style={{ marginBottom: 6 }}>
-                      {parentName}
-                    </p>
-                  ) : null;
-                })()}
-                <h1 className="page-title font-body text-[30px] font-medium text-text-primary leading-[1.12] tracking-[-0.02em]"
+                <h1 className="page-title font-body text-[24px] font-medium text-text-primary leading-[1.12] tracking-[-0.02em]"
                   style={{ marginBottom: 14 }}>
                   {currentNode?.name}
                 </h1>

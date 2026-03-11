@@ -599,8 +599,8 @@ const BEDROCK_MODEL_ID = process.env.AWS_BEDROCK_MODEL_ID || 'us.anthropic.claud
 
 const MODEL_MAP = {
   haiku: 'us.anthropic.claude-haiku-4-5-20251001-v1:0',
-  sonnet: 'us.anthropic.claude-sonnet-4-6-20250514-v1:0',
-  opus: 'us.anthropic.claude-opus-4-6-20250514-v1:0',
+  sonnet: 'us.anthropic.claude-sonnet-4-6',
+  opus: 'us.anthropic.claude-opus-4-6-v1',
 };
 
 function resolveModelId(model) {

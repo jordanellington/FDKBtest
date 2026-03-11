@@ -610,19 +610,36 @@ function SourceCard({ source, onClick }) {
     : source.name;
   const pub = source.publicationTitle;
   const date = formatDate(source.publicationDate);
-  const meta = [pub, date].filter(Boolean).join(' · ');
+  const page = source.page;
+  const distro = source.distroLevel;
+
+  // Build metadata pieces
+  const metaParts = [
+    pub,
+    date,
+    page ? `p. ${page}` : null,
+  ].filter(Boolean);
+
+  // Distro badge config
+  const distroBadge = distro ? (() => {
+    const d = distro.toLowerCase();
+    if (d.includes('external')) return { label: 'External', color: '#4db8a4', bg: 'rgba(77,184,164,0.08)' };
+    if (d.includes('internal')) return { label: 'Internal', color: '#c8a44e', bg: 'rgba(200,164,78,0.08)' };
+    if (d.includes('restricted')) return { label: 'Restricted', color: '#e8836e', bg: 'rgba(232,131,110,0.08)' };
+    return null;
+  })() : null;
 
   return (
     <button
       onClick={onClick}
       style={{
         display: 'flex',
-        alignItems: 'center',
+        alignItems: 'flex-start',
         gap: 8,
-        padding: '6px 10px',
+        padding: '8px 10px',
         background: 'transparent',
         border: 'none',
-        borderRadius: 6,
+        borderRadius: 8,
         cursor: 'pointer',
         textAlign: 'left',
         transition: 'background 0.15s',
@@ -633,22 +650,42 @@ function SourceCard({ source, onClick }) {
       onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--color-bg-secondary)'; }}
       onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
     >
-      <FileText size={13} style={{ color: 'var(--color-accent)', flexShrink: 0 }} />
-      <span style={{
-        fontSize: 12, color: 'var(--color-text-primary)',
-        whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-        flex: 1, minWidth: 0,
-      }}>
-        {title}
-      </span>
-      {meta && (
-        <span style={{
-          fontSize: 11, color: 'var(--color-text-muted)',
-          whiteSpace: 'nowrap', flexShrink: 0,
+      <FileText size={14} style={{ color: 'var(--color-accent)', flexShrink: 0, marginTop: 1 }} />
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{
+          fontSize: 12,
+          color: 'var(--color-text-primary)',
+          whiteSpace: 'nowrap',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
         }}>
-          {meta}
-        </span>
-      )}
+          {title}
+        </div>
+        {(metaParts.length > 0 || distroBadge) && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}>
+            {metaParts.length > 0 && (
+              <span style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>
+                {metaParts.join(' · ')}
+              </span>
+            )}
+            {distroBadge && (
+              <span style={{
+                fontSize: 9,
+                fontWeight: 700,
+                letterSpacing: '0.04em',
+                textTransform: 'uppercase',
+                padding: '1px 6px',
+                borderRadius: 3,
+                color: distroBadge.color,
+                background: distroBadge.bg,
+                whiteSpace: 'nowrap',
+              }}>
+                {distroBadge.label}
+              </span>
+            )}
+          </div>
+        )}
+      </div>
     </button>
   );
 }

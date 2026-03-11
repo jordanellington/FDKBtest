@@ -1,8 +1,8 @@
-import { Outlet, NavLink, useNavigate } from 'react-router-dom';
+import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import { useAuth } from '../hooks/useAuth';
-import { LogOut, Menu, X, Sun, Moon } from 'lucide-react';
+import { LogOut, Menu, X, Sun, Moon, RotateCcw } from 'lucide-react';
 import AiChat from './AiChat';
 import PortalNav from './PortalNav';
 import { getTheme, saveTheme, applyTheme } from '../lib/theme';
@@ -10,6 +10,8 @@ import { getTheme, saveTheme, applyTheme } from '../lib/theme';
 export default function Layout() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const isChat = location.pathname === '/chat';
   const [chatOpen, setChatOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [theme, setTheme] = useState(() => getTheme());
@@ -112,6 +114,20 @@ export default function Layout() {
             </div>
 
           </div>
+
+          {/* Clear Chat — bottom of sidebar, only on /chat */}
+          {isChat && (
+            <div className="px-4 pb-5">
+              <button
+                onClick={() => window.dispatchEvent(new Event('fdkb-clear-chat'))}
+                className="flex items-center gap-2 w-full rounded-md text-[12px] text-text-muted hover:text-text-primary hover:bg-bg-secondary transition-colors"
+                style={{ padding: '8px 14px' }}
+              >
+                <RotateCcw size={13} strokeWidth={1.8} />
+                <span>Clear Chat</span>
+              </button>
+            </div>
+          )}
         </nav>
 
         {/* Main content */}

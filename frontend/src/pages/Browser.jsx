@@ -66,6 +66,7 @@ export default function Browser() {
     async function load() {
       setLoading(true);
       setSelectedDoc(null);
+      setCurrentNode(null);
       try {
         const [childrenData, nodeData] = await Promise.all([
           getChildren(currentId, { maxItems: 100 }),

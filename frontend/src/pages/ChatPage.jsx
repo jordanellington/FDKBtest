@@ -110,7 +110,12 @@ export default function ChatPage() {
     userScrolledUp.current = scrollHeight - scrollTop - clientHeight > 80;
   }, []);
 
+  const [searchQuery, setSearchQuery] = useState(null);
+
   const openDoc = (doc) => {
+    // Use first ~80 chars of snippet for text highlighting in the PDF viewer
+    const snippet = doc.snippet || null;
+    setSearchQuery(snippet ? snippet.slice(0, 80).trim() : null);
     setViewerDoc({
       id: doc.nodeId,
       name: doc.name,
@@ -395,7 +400,8 @@ export default function ChatPage() {
         <div style={{ flex: 1, minWidth: 400, borderLeft: '1px solid var(--color-border)' }}>
           <DocumentViewer
             document={viewerDoc}
-            onClose={() => setViewerDoc(null)}
+            searchQuery={searchQuery}
+            onClose={() => { setViewerDoc(null); setSearchQuery(null); }}
             fillContainer
           />
         </div>

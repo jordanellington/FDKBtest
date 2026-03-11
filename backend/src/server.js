@@ -800,6 +800,7 @@ app.post('/api/chat/fdkb', requireAuth, async (req, res) => {
           distroLevel: cccRecord?.cccDistroLevel || null,
           publicationDate: cccRecord?.publicationDate || null,
           page: chunk.page,
+          snippet: chunk.text.slice(0, 200),
           score: chunk.score,
         });
       }

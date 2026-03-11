@@ -188,7 +188,7 @@ export default function Browser() {
                   const els = currentNode?.path?.elements || [];
                   const dlIdx = els.findIndex(e => e.name === 'documentlibrary');
                   const vis = dlIdx >= 0 ? els.slice(dlIdx + 1) : els;
-                  const parentName = vis.length >= 2 ? vis[vis.length - 2]?.name : null;
+                  const parentName = vis.length >= 2 ? vis[vis.length - 1]?.name : null;
                   return parentName ? (
                     <p className="text-[11px] font-semibold tracking-[0.1em] text-text-muted uppercase" style={{ marginBottom: 6 }}>
                       {parentName}

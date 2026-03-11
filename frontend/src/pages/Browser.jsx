@@ -240,14 +240,6 @@ export default function Browser() {
                       <span className="text-[10px] font-semibold tracking-[0.1em] text-text-muted uppercase">Documents</span>
                     </div>
                   )}
-                  {folderStats && folderStats.indexedDocuments > 0 && (
-                    <div className="flex items-baseline" style={{ gap: 10 }}>
-                      <span className="stats-number font-body text-[26px] font-semibold text-accent-bright leading-none" style={{ fontVariantNumeric: 'tabular-nums' }}>
-                        <Counter target={folderStats.indexedDocuments} duration={1000} />
-                      </span>
-                      <span className="text-[10px] font-semibold tracking-[0.1em] text-text-muted uppercase">Indexed</span>
-                    </div>
-                  )}
                   {folders.length > 0 && !indexing && (
                     <button
                       onClick={handleDiscover}

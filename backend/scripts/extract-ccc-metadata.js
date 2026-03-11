@@ -241,46 +241,52 @@ async function main() {
   }
 
   let errorCount = 0;
+  let processed = 0;
   const startTime = Date.now();
+  const CONCURRENCY = parseInt(process.env.CCC_CONCURRENCY || '5', 10);
 
-  for (let i = 0; i < remaining.length; i++) {
-    const doc = remaining[i];
-    const idx = startIdx + i + 1;
-    process.stdout.write(`[${idx}/${total}] 📄 ${doc.name} (${doc.pages}p)... `);
-
+  async function processDoc(doc, idx) {
+    const label = `[${idx}/${total}] 📄 ${doc.name}`;
     try {
-      // 1. Fetch PDF from Alfresco
       const pdfBuffer = await fetchPdf(doc.id);
-      process.stdout.write(`${(pdfBuffer.byteLength / 1024).toFixed(0)}KB... `);
-
-      // 2. Single-pass: extract metadata + CCC classification
       const result = await extractAndClassify(pdfBuffer, doc.name);
       if (!result) {
-        console.log('❌ extraction failed');
-        results.push({ nodeId: doc.id, name: doc.name, error: 'extraction_failed' });
-        errorCount++;
-      } else {
-        results.push({ nodeId: doc.id, name: doc.name, ...result });
-
-        const badge = {
-          'Internal Only': '🟡',
-          'Internal + Client (with notice)': '🟠',
-          'External Unrestricted': '🟢',
-          'Not Covered': '🔴',
-        }[result.cccDistroLevel] || '⚪';
-
-        console.log(`${badge} ${result.cccDistroLevel}`);
+        console.log(`${label} ❌ extraction failed`);
+        return { nodeId: doc.id, name: doc.name, error: 'extraction_failed' };
       }
+      const badge = {
+        'Internal Only': '🟡',
+        'Internal + Client (with notice)': '🟠',
+        'External Unrestricted': '🟢',
+        'Not Covered': '🔴',
+      }[result.cccDistroLevel] || '⚪';
+      console.log(`${label} ${badge} ${result.cccDistroLevel}`);
+      return { nodeId: doc.id, name: doc.name, ...result };
     } catch (err) {
-      console.log(`❌ ${err.message}`);
-      results.push({ nodeId: doc.id, name: doc.name, error: err.message });
-      errorCount++;
+      console.log(`${label} ❌ ${err.message}`);
+      return { nodeId: doc.id, name: doc.name, error: err.message };
     }
+  }
 
-    // Save incrementally every 10 docs
-    if ((i + 1) % 10 === 0 || i === remaining.length - 1) {
-      writeFileSync(outputPath, JSON.stringify(results, null, 2));
+  // Process in batches of CONCURRENCY
+  for (let i = 0; i < remaining.length; i += CONCURRENCY) {
+    const batch = remaining.slice(i, i + CONCURRENCY);
+    const batchResults = await Promise.all(
+      batch.map((doc, j) => processDoc(doc, startIdx + i + j + 1))
+    );
+    for (const r of batchResults) {
+      results.push(r);
+      if (r.error) errorCount++;
     }
+    processed += batch.length;
+
+    // Save after every batch
+    writeFileSync(outputPath, JSON.stringify(results, null, 2));
+
+    // Progress
+    const elapsed = (Date.now() - startTime) / 1000;
+    const rate = (processed / (elapsed / 60)).toFixed(0);
+    console.log(`  ── batch done: ${results.length}/${total} total, ${rate} docs/min ──`);
   }
 
   const elapsed = ((Date.now() - startTime) / 1000).toFixed(0);

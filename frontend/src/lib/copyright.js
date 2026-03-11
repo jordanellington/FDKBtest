@@ -66,7 +66,7 @@ export function classifyDocument(item) {
     const matchedOn = props['ccc:matchedOn'] || '';
     return {
       ...info,
-      tooltip: info.tooltip + (matchedOn ? `\n\nMatched: ${matchedOn}` : ''),
+      tooltip: info.tooltip,
       cccEnriched: true,
     };
   }

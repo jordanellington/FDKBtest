@@ -267,7 +267,7 @@ export function getDocCount() {
   return db.getDocCount();
 }
 
-const CROSS_DOC_K = 10;
+const CROSS_DOC_K = 30;
 
 /**
  * Retrieve the most relevant chunks across all indexed documents.

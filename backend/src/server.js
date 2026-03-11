@@ -1002,6 +1002,7 @@ app.post('/api/rag/discover', requireAuth, async (req, res) => {
   if (!nodeId) return res.status(400).json({ error: 'nodeId is required' });
 
   try {
+    console.log(`[rag-discover] Starting discovery for nodeId: ${nodeId}`);
     const allDocs = [];
     let skipCount = 0;
     const maxItems = 100;
@@ -1009,6 +1010,7 @@ app.post('/api/rag/discover', requireAuth, async (req, res) => {
 
     // Paginate through ANCESTOR search to collect all descendant documents
     while (totalItems === null || skipCount < totalItems) {
+      console.log(`[rag-discover] Fetching page: skipCount=${skipCount}, totalItems=${totalItems}`);
       const searchResp = await alfrescoPost(
         `${ALFRESCO_API}/search/versions/1/search`,
         req.session,
@@ -1023,6 +1025,7 @@ app.post('/api/rag/discover', requireAuth, async (req, res) => {
       const data = await searchResp.json();
       totalItems = data.list?.pagination?.totalItems ?? 0;
       const entries = data.list?.entries || [];
+      console.log(`[rag-discover] Page returned ${entries.length} entries, totalItems=${totalItems}`);
       for (const e of entries) {
         allDocs.push({
           nodeId: e.entry.id,
@@ -1036,6 +1039,7 @@ app.post('/api/rag/discover', requireAuth, async (req, res) => {
     }
 
     const alreadyIndexed = allDocs.filter(d => d.indexed).length;
+    console.log(`[rag-discover] Complete: ${allDocs.length} total, ${alreadyIndexed} indexed`);
     res.json({
       totalDocuments: allDocs.length,
       alreadyIndexed,

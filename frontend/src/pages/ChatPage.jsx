@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
-import { Send, ChevronDown, ChevronUp, FileText, Sparkles, Plus, X, RotateCcw } from 'lucide-react';
+import { Send, ChevronDown, ChevronUp, FileText, Sparkles, Plus, X, RotateCcw, Check } from 'lucide-react';
 import Markdown from 'react-markdown';
 import { chatFdkbStream } from '../lib/api';
 import DocumentViewer from '../components/DocumentViewer';
@@ -278,7 +278,6 @@ export default function ChatPage() {
               fontFamily: 'var(--font-body)',
             }}
           />
-          <ModelSelector model={model} onChange={setModel} disabled={streaming} />
           {input.trim() && (
             <button
               type="submit"
@@ -299,15 +298,21 @@ export default function ChatPage() {
           )}
         </div>
       </form>
-      <p style={{
-        fontSize: 11,
-        color: 'var(--color-text-muted)',
-        textAlign: 'center',
-        marginTop: 8,
-        fontFamily: 'var(--font-body)',
-      }}>
-        Private AI for Covington &amp; Burling LLP. Conversations are confidential. Always verify responses.
-      </p>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 8, padding: '0 4px' }}>
+        <div style={{ flex: 1 }} />
+        <p style={{
+          fontSize: 11,
+          color: 'var(--color-text-muted)',
+          textAlign: 'center',
+          fontFamily: 'var(--font-body)',
+          margin: 0,
+        }}>
+          Private AI for Covington &amp; Burling LLP. Conversations are confidential. Always verify responses.
+        </p>
+        <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-end' }}>
+          <ModelSelector model={model} onChange={setModel} disabled={streaming} />
+        </div>
+      </div>
     </div>
   );
 
@@ -421,27 +426,89 @@ export default function ChatPage() {
 // ── Sub-components ──────────────────────────────────────────────────────────
 
 function ModelSelector({ model, onChange, disabled }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+  const current = MODELS.find((m) => m.id === model);
+
+  useEffect(() => {
+    if (!open) return;
+    const handleClick = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [open]);
+
   return (
-    <select
-      value={model}
-      onChange={(e) => onChange(e.target.value)}
-      disabled={disabled}
-      style={{
-        background: 'var(--color-bg-elevated)',
-        border: '1px solid var(--color-border)',
-        borderRadius: 6,
-        padding: '4px 8px',
-        fontSize: 11,
-        color: 'var(--color-text-secondary)',
-        cursor: 'pointer',
-        fontFamily: 'var(--font-body)',
-        outline: 'none',
-      }}
-    >
-      {MODELS.map((m) => (
-        <option key={m.id} value={m.id}>{m.label}</option>
-      ))}
-    </select>
+    <div ref={ref} style={{ position: 'relative' }}>
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={() => setOpen(!open)}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 4,
+          background: 'transparent',
+          border: 'none',
+          padding: '2px 6px',
+          fontSize: 13,
+          color: 'var(--color-text-muted)',
+          cursor: disabled ? 'default' : 'pointer',
+          fontFamily: 'var(--font-body)',
+          borderRadius: 6,
+          transition: 'color 0.15s',
+          opacity: disabled ? 0.5 : 1,
+        }}
+        onMouseEnter={(e) => { if (!disabled) e.currentTarget.style.color = 'var(--color-text-primary)'; }}
+        onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--color-text-muted)'; }}
+      >
+        {current?.label}
+        <ChevronDown size={13} style={{ transition: 'transform 0.15s', transform: open ? 'rotate(180deg)' : 'none' }} />
+      </button>
+
+      {open && (
+        <div style={{
+          position: 'absolute',
+          bottom: '100%',
+          right: 0,
+          marginBottom: 6,
+          background: 'var(--color-bg-elevated)',
+          border: '1px solid var(--color-border-mid)',
+          borderRadius: 12,
+          padding: '6px',
+          minWidth: 160,
+          boxShadow: '0 8px 32px rgba(0,0,0,0.28)',
+          zIndex: 50,
+        }}>
+          {MODELS.map((m) => (
+            <button
+              key={m.id}
+              type="button"
+              onClick={() => { onChange(m.id); setOpen(false); }}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                width: '100%',
+                padding: '8px 12px',
+                background: 'transparent',
+                border: 'none',
+                borderRadius: 8,
+                fontSize: 13,
+                fontFamily: 'var(--font-body)',
+                color: m.id === model ? 'var(--color-text-primary)' : 'var(--color-text-secondary)',
+                cursor: 'pointer',
+                transition: 'background 0.1s',
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--color-bg-primary)'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+            >
+              {m.label}
+              {m.id === model && <Check size={14} style={{ color: 'var(--color-accent)' }} />}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 

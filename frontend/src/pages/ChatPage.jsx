@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
-import { Send, Square, ChevronDown, ChevronUp, FileText, Sparkles, Plus, X, Check } from 'lucide-react';
+import { Send, Square, RotateCcw, ChevronDown, ChevronUp, FileText, Sparkles, Plus, X, Check } from 'lucide-react';
 import Markdown from 'react-markdown';
 import { chatFdkbStream } from '../lib/api';
 import DocumentViewer from '../components/DocumentViewer';
@@ -277,7 +277,7 @@ export default function ChatPage() {
                 fontFamily: 'var(--font-body)',
               }}
             />
-            {!isEmpty && (
+            {!isEmpty && !streaming && (
               <button
                 type="button"
                 onClick={() => { setMessages([]); setViewerDoc(null); setScope(null); setSearchQuery(null); }}
@@ -293,11 +293,15 @@ export default function ChatPage() {
                   borderRadius: 6,
                   transition: 'color 0.15s',
                   flexShrink: 0,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 4,
                 }}
                 onMouseEnter={(e) => e.currentTarget.style.color = 'var(--color-text-primary)'}
                 onMouseLeave={(e) => e.currentTarget.style.color = 'var(--color-text-muted)'}
                 title="Start a new conversation"
               >
+                <RotateCcw size={11} strokeWidth={2} />
                 New chat
               </button>
             )}

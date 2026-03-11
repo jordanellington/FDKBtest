@@ -277,6 +277,30 @@ export default function ChatPage() {
                 fontFamily: 'var(--font-body)',
               }}
             />
+            {!isEmpty && (
+              <button
+                type="button"
+                onClick={() => { setMessages([]); setViewerDoc(null); setScope(null); setSearchQuery(null); }}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontSize: 11,
+                  fontWeight: 500,
+                  color: 'var(--color-text-muted)',
+                  whiteSpace: 'nowrap',
+                  padding: '4px 8px',
+                  borderRadius: 6,
+                  transition: 'color 0.15s',
+                  flexShrink: 0,
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.color = 'var(--color-text-primary)'}
+                onMouseLeave={(e) => e.currentTarget.style.color = 'var(--color-text-muted)'}
+                title="Start a new conversation"
+              >
+                New chat
+              </button>
+            )}
           </div>
 
           {/* Bottom row: + Scope on left, model selector + send on right */}

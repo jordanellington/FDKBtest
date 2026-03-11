@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
-import { Send, Square, RotateCcw, ChevronDown, ChevronUp, FileText, Sparkles, Plus, X, Check } from 'lucide-react';
+import { Send, Square, RotateCcw, ChevronDown, ChevronUp, FileText, Sparkles, Plus, X, Check, Folder } from 'lucide-react';
 import Markdown from 'react-markdown';
 import { chatFdkbStream } from '../lib/api';
 import DocumentViewer from '../components/DocumentViewer';
@@ -406,7 +406,11 @@ export default function ChatPage() {
             marginTop: '-12vh',
           }}>
             <div style={{ textAlign: 'center', maxWidth: 680 }}>
-              <Sparkles size={28} style={{ color: 'var(--color-accent-gold)', margin: '0 auto 12px' }} />
+              {scope ? (
+                <Folder size={28} style={{ color: 'var(--color-accent)', opacity: 0.6, margin: '0 auto 12px' }} strokeWidth={1.2} />
+              ) : (
+                <Sparkles size={28} style={{ color: 'var(--color-accent-gold)', margin: '0 auto 12px' }} />
+              )}
               <h2 style={{
                 fontFamily: 'var(--font-display)',
                 fontSize: 32,
@@ -414,7 +418,7 @@ export default function ChatPage() {
                 color: 'var(--color-text-primary)',
                 marginBottom: 8,
               }}>
-                Ask anything about the FDKB
+                {scope ? scope.folderName : 'Ask anything about the FDKB'}
               </h2>
               <p style={{
                 fontSize: 14,
@@ -423,7 +427,9 @@ export default function ChatPage() {
                 margin: '0 auto',
                 lineHeight: 1.6,
               }}>
-                Search across hundreds of FDA, biotech, and regulatory documents. Responses include citations to source documents.
+                {scope
+                  ? 'Ask questions about documents in this folder. Responses include citations to source documents.'
+                  : 'Search across hundreds of FDA, biotech, and regulatory documents. Responses include citations to source documents.'}
               </p>
             </div>
             <div style={{ width: '100%', marginTop: 40 }}>
@@ -440,6 +446,22 @@ export default function ChatPage() {
               style={{ minHeight: 0 }}
             >
               <div style={{ maxWidth: 900, margin: '0 auto', padding: '32px 24px' }}>
+                {scope && (
+                  <div style={{
+                    display: 'flex', alignItems: 'center', gap: 8,
+                    paddingBottom: 16, marginBottom: 24,
+                    borderBottom: '1px solid var(--color-border)',
+                  }}>
+                    <Folder size={14} style={{ color: 'var(--color-accent)', opacity: 0.7 }} strokeWidth={1.5} />
+                    <span style={{
+                      fontSize: 13, fontWeight: 500,
+                      color: 'var(--color-text-secondary)',
+                      fontFamily: 'var(--font-body)',
+                    }}>
+                      {scope.folderName || 'Scoped folder'}
+                    </span>
+                  </div>
+                )}
                 <div className="flex flex-col gap-6">
                   {messages.map((msg, i) => (
                     <MessageBubble key={i} msg={msg} onOpenDoc={openDoc} />

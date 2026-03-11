@@ -117,11 +117,11 @@ export default function Layout() {
 
           {/* Clear Chat — bottom of sidebar, only on /chat */}
           {isChat && (
-            <div className="px-4 pb-5">
+            <div className="px-4 py-4 border-t border-border">
               <button
                 onClick={() => window.dispatchEvent(new Event('fdkb-clear-chat'))}
-                className="flex items-center gap-2 w-full rounded-md text-[12px] text-text-muted hover:text-text-primary hover:bg-bg-secondary transition-colors"
-                style={{ padding: '8px 14px' }}
+                className="flex items-center gap-2 w-full rounded-md text-[12px] text-text-secondary hover:text-text-primary hover:bg-bg-elevated transition-colors"
+                style={{ padding: '9px 14px' }}
               >
                 <RotateCcw size={13} strokeWidth={1.8} />
                 <span>Clear Chat</span>

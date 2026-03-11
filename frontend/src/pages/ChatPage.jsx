@@ -195,67 +195,17 @@ export default function ChatPage() {
         <div
           style={{
             display: 'flex',
-            alignItems: isEmpty ? 'flex-end' : 'center',
-            gap: 8,
+            flexDirection: 'column',
             background: isEmpty ? 'var(--color-bg-elevated)' : 'var(--color-bg-primary)',
-            border: `1px solid var(--color-border-mid)`,
-            borderRadius: isEmpty ? 24 : 12,
-            padding: isEmpty ? '20px 22px' : '10px 14px',
+            border: '1px solid var(--color-border-mid)',
+            borderRadius: isEmpty ? 24 : 16,
+            padding: isEmpty ? '16px 20px 12px' : '12px 16px 8px',
             minHeight: isEmpty ? 80 : 'auto',
             position: 'relative',
             boxShadow: isEmpty ? '0 4px 24px rgba(0,0,0,0.12)' : 'none',
             transition: 'all 0.3s ease',
           }}
         >
-          {/* Scope tag or + Scope button */}
-          {scope ? (
-            <span style={{
-              display: 'inline-flex', alignItems: 'center', gap: 4,
-              padding: '3px 8px 3px 10px',
-              background: 'rgba(86, 191, 168, 0.1)',
-              border: '1px solid rgba(86, 191, 168, 0.25)',
-              borderRadius: 12,
-              fontSize: 11, fontWeight: 600,
-              color: 'var(--color-accent)',
-              whiteSpace: 'nowrap', flexShrink: 0,
-            }}>
-              {scope.folderName?.replace(/^[\d.]+ /, '') || 'Folder'}
-              <X
-                size={12}
-                style={{ cursor: 'pointer', opacity: 0.7 }}
-                onClick={() => setScope(null)}
-              />
-            </span>
-          ) : (
-            <button
-              type="button"
-              onClick={() => setShowScopeNav(!showScopeNav)}
-              style={{
-                display: 'inline-flex', alignItems: 'center', gap: 3,
-                padding: '3px 9px',
-                background: 'transparent',
-                border: '1px dashed var(--color-border)',
-                borderRadius: 12,
-                fontSize: 11,
-                color: 'var(--color-text-muted)',
-                cursor: 'pointer',
-                whiteSpace: 'nowrap', flexShrink: 0,
-                transition: 'all 0.15s',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.borderColor = 'var(--color-accent)';
-                e.currentTarget.style.color = 'var(--color-accent)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.borderColor = 'var(--color-border)';
-                e.currentTarget.style.color = 'var(--color-text-muted)';
-              }}
-            >
-              <Plus size={11} />
-              Scope
-            </button>
-          )}
-
           {/* Scope navigator popup */}
           {showScopeNav && (
             <ScopeNavigator
@@ -267,59 +217,109 @@ export default function ChatPage() {
             />
           )}
 
-          <input
-            ref={inputRef}
-            type="text"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder={scope ? `Ask about ${scope.folderName?.replace(/^[\d.]+ /, '')}...` : (isEmpty ? 'How can I help you today?' : 'Reply...')}
-            disabled={streaming}
-            style={{
-              flex: 1,
-              background: 'transparent',
-              border: 'none',
-              outline: 'none',
-              fontSize: isEmpty ? 16 : 14,
-              color: 'var(--color-text-primary)',
-              fontFamily: 'var(--font-body)',
-            }}
-          />
-          {input.trim() && (
-            <button
-              type="submit"
+          {/* Top row: scope tag + text input */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            {scope && (
+              <span style={{
+                display: 'inline-flex', alignItems: 'center', gap: 4,
+                padding: '3px 8px 3px 10px',
+                background: 'rgba(86, 191, 168, 0.1)',
+                border: '1px solid rgba(86, 191, 168, 0.25)',
+                borderRadius: 12,
+                fontSize: 11, fontWeight: 600,
+                color: 'var(--color-accent)',
+                whiteSpace: 'nowrap', flexShrink: 0,
+              }}>
+                {scope.folderName?.replace(/^[\d.]+ /, '') || 'Folder'}
+                <X
+                  size={12}
+                  style={{ cursor: 'pointer', opacity: 0.7 }}
+                  onClick={() => setScope(null)}
+                />
+              </span>
+            )}
+            <input
+              ref={inputRef}
+              type="text"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder={scope ? `Ask about ${scope.folderName?.replace(/^[\d.]+ /, '')}...` : (isEmpty ? 'How can I help you today?' : 'Reply...')}
               disabled={streaming}
               style={{
-                background: 'var(--color-accent)',
+                flex: 1,
+                background: 'transparent',
                 border: 'none',
-                borderRadius: 8,
-                padding: '6px 8px',
-                cursor: streaming ? 'default' : 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                opacity: streaming ? 0.5 : 1,
+                outline: 'none',
+                fontSize: isEmpty ? 16 : 14,
+                color: 'var(--color-text-primary)',
+                fontFamily: 'var(--font-body)',
               }}
+            />
+          </div>
+
+          {/* Bottom row: + Scope on left, model selector + send on right */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 8 }}>
+            <button
+              type="button"
+              onClick={() => setShowScopeNav(!showScopeNav)}
+              style={{
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                width: 28, height: 28,
+                background: 'transparent',
+                border: '1px solid var(--color-border)',
+                borderRadius: '50%',
+                color: 'var(--color-text-muted)',
+                cursor: 'pointer',
+                transition: 'all 0.15s',
+                flexShrink: 0,
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.borderColor = 'var(--color-accent)';
+                e.currentTarget.style.color = 'var(--color-accent)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.borderColor = 'var(--color-border)';
+                e.currentTarget.style.color = 'var(--color-text-muted)';
+              }}
+              title="Scope to folder"
             >
-              <Send size={14} style={{ color: 'var(--color-bg-primary)' }} />
+              <Plus size={14} />
             </button>
-          )}
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <ModelSelector model={model} onChange={setModel} disabled={streaming} />
+              {input.trim() && (
+                <button
+                  type="submit"
+                  disabled={streaming}
+                  style={{
+                    background: 'var(--color-accent)',
+                    border: 'none',
+                    borderRadius: 8,
+                    padding: '6px 8px',
+                    cursor: streaming ? 'default' : 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    opacity: streaming ? 0.5 : 1,
+                  }}
+                >
+                  <Send size={14} style={{ color: 'var(--color-bg-primary)' }} />
+                </button>
+              )}
+            </div>
+          </div>
         </div>
       </form>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 8, padding: '0 4px' }}>
-        <div style={{ flex: 1 }} />
-        <p style={{
-          fontSize: 11,
-          color: 'var(--color-text-muted)',
-          textAlign: 'center',
-          fontFamily: 'var(--font-body)',
-          margin: 0,
-        }}>
-          Private AI for Covington &amp; Burling LLP. Conversations are confidential. Always verify responses.
-        </p>
-        <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-end' }}>
-          <ModelSelector model={model} onChange={setModel} disabled={streaming} />
-        </div>
-      </div>
+      <p style={{
+        fontSize: 11,
+        color: 'var(--color-text-muted)',
+        textAlign: 'center',
+        marginTop: 8,
+        fontFamily: 'var(--font-body)',
+      }}>
+        Private AI for Covington &amp; Burling LLP. Conversations are confidential. Always verify responses.
+      </p>
     </div>
   );
 

@@ -29,7 +29,7 @@ function DistributionBadge({ classification }) {
 
   return (
     <span
-      title={classification.tooltip}
+      data-tooltip={classification.tooltip}
       className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium"
       style={{ color: c.color, background: c.bg, border: `1px solid ${c.border}` }}
     >

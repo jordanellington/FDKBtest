@@ -444,7 +444,7 @@ export default function SearchPage() {
                             {meta.cccEnriched ? (meta.publicationTitle || meta.publisher) : meta.publisher}
                           </span>
                           <span
-                            title={cls.tooltip}
+                            data-tooltip={cls.tooltip}
                             className="inline-flex items-center"
                             style={{
                               fontSize: 9,

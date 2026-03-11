@@ -166,20 +166,12 @@ export default function Browser() {
                       <span className="text-[10px] font-semibold tracking-[0.1em] text-text-muted uppercase">Subfolders</span>
                     </div>
                   )}
-                  {files.length > 0 && (
-                    <div className="flex items-baseline" style={{ gap: 10 }}>
-                      <span className="stats-number font-display text-[28px] font-light text-accent-bright leading-none">
-                        {files.length}
-                      </span>
-                      <span className="text-[10px] font-semibold tracking-[0.1em] text-text-muted uppercase">Files</span>
-                    </div>
-                  )}
                   {folderStats && folderStats.totalDocuments > 0 && (
                     <div className="flex items-baseline" style={{ gap: 10 }}>
                       <span className="stats-number font-display text-[28px] font-light text-accent-bright leading-none">
                         <Counter target={folderStats.totalDocuments} duration={1000} />
                       </span>
-                      <span className="text-[10px] font-semibold tracking-[0.1em] text-text-muted uppercase">Total Documents</span>
+                      <span className="text-[10px] font-semibold tracking-[0.1em] text-text-muted uppercase">Documents</span>
                     </div>
                   )}
                   {folderStats && folderStats.indexedDocuments > 0 && (

@@ -184,7 +184,18 @@ export default function Browser() {
                 className="page-section-hero"
                 style={{ padding: '8px 56px 0', marginBottom: 32 }}
               >
-                <h1 className="page-title font-body text-[30px] font-semibold text-text-primary leading-[1.12] tracking-[-0.02em]"
+                {(() => {
+                  const els = currentNode?.path?.elements || [];
+                  const dlIdx = els.findIndex(e => e.name === 'documentlibrary');
+                  const vis = dlIdx >= 0 ? els.slice(dlIdx + 1) : els;
+                  const parentName = vis.length >= 2 ? vis[vis.length - 2]?.name : null;
+                  return parentName ? (
+                    <p className="text-[11px] font-semibold tracking-[0.1em] text-text-muted uppercase" style={{ marginBottom: 6 }}>
+                      {parentName}
+                    </p>
+                  ) : null;
+                })()}
+                <h1 className="page-title font-body text-[30px] font-medium text-text-primary leading-[1.12] tracking-[-0.02em]"
                   style={{ marginBottom: 14 }}>
                   {currentNode?.name}
                 </h1>
@@ -197,14 +208,6 @@ export default function Browser() {
                         {folders.length}
                       </span>
                       <span className="text-[10px] font-semibold tracking-[0.1em] text-text-muted uppercase">Subfolders</span>
-                    </div>
-                  )}
-                  {pagination && (pagination.totalItems - folders.length) > 0 && (
-                    <div className="flex items-baseline" style={{ gap: 10 }}>
-                      <span className="stats-number font-body text-[26px] font-semibold text-accent-bright leading-none" style={{ fontVariantNumeric: 'tabular-nums' }}>
-                        {(pagination.totalItems - folders.length).toLocaleString()}
-                      </span>
-                      <span className="text-[10px] font-semibold tracking-[0.1em] text-text-muted uppercase">Files</span>
                     </div>
                   )}
                   {folderStats && folderStats.totalDocuments > 0 && (

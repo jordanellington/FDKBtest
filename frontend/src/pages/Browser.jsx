@@ -184,7 +184,7 @@ export default function Browser() {
                 className="page-section-hero"
                 style={{ padding: '8px 56px 0', marginBottom: 32 }}
               >
-                <h1 className="page-title font-display text-[36px] font-light text-text-primary leading-[1.08] tracking-[-0.02em]"
+                <h1 className="page-title font-body text-[30px] font-semibold text-text-primary leading-[1.12] tracking-[-0.02em]"
                   style={{ marginBottom: 14 }}>
                   {currentNode?.name}
                 </h1>
@@ -193,7 +193,7 @@ export default function Browser() {
                   style={{ gap: 48, paddingBottom: 20, borderBottom: '1px solid var(--color-border)' }}>
                   {folders.length > 0 && (
                     <div className="flex items-baseline" style={{ gap: 10 }}>
-                      <span className="stats-number font-display text-[28px] font-light text-accent-bright leading-none">
+                      <span className="stats-number font-body text-[26px] font-semibold text-accent-bright leading-none" style={{ fontVariantNumeric: 'tabular-nums' }}>
                         {folders.length}
                       </span>
                       <span className="text-[10px] font-semibold tracking-[0.1em] text-text-muted uppercase">Subfolders</span>
@@ -201,7 +201,7 @@ export default function Browser() {
                   )}
                   {pagination && (pagination.totalItems - folders.length) > 0 && (
                     <div className="flex items-baseline" style={{ gap: 10 }}>
-                      <span className="stats-number font-display text-[28px] font-light text-accent-bright leading-none">
+                      <span className="stats-number font-body text-[26px] font-semibold text-accent-bright leading-none" style={{ fontVariantNumeric: 'tabular-nums' }}>
                         {(pagination.totalItems - folders.length).toLocaleString()}
                       </span>
                       <span className="text-[10px] font-semibold tracking-[0.1em] text-text-muted uppercase">Files</span>
@@ -209,7 +209,7 @@ export default function Browser() {
                   )}
                   {folderStats && folderStats.totalDocuments > 0 && (
                     <div className="flex items-baseline" style={{ gap: 10 }}>
-                      <span className="stats-number font-display text-[28px] font-light text-accent-bright leading-none">
+                      <span className="stats-number font-body text-[26px] font-semibold text-accent-bright leading-none" style={{ fontVariantNumeric: 'tabular-nums' }}>
                         <Counter target={folderStats.totalDocuments} duration={1000} />
                       </span>
                       <span className="text-[10px] font-semibold tracking-[0.1em] text-text-muted uppercase">Documents</span>
@@ -217,7 +217,7 @@ export default function Browser() {
                   )}
                   {folderStats && folderStats.indexedDocuments > 0 && (
                     <div className="flex items-baseline" style={{ gap: 10 }}>
-                      <span className="stats-number font-display text-[28px] font-light text-accent-bright leading-none">
+                      <span className="stats-number font-body text-[26px] font-semibold text-accent-bright leading-none" style={{ fontVariantNumeric: 'tabular-nums' }}>
                         <Counter target={folderStats.indexedDocuments} duration={1000} />
                       </span>
                       <span className="text-[10px] font-semibold tracking-[0.1em] text-text-muted uppercase">Indexed</span>

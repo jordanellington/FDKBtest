@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
-import { Send, ChevronDown, ChevronUp, FileText, Sparkles, Plus, X } from 'lucide-react';
+import { Send, ChevronDown, ChevronUp, FileText, Sparkles, Plus, X, RotateCcw } from 'lucide-react';
 import Markdown from 'react-markdown';
 import { chatFdkbStream } from '../lib/api';
 import DocumentViewer from '../components/DocumentViewer';
@@ -357,6 +357,32 @@ export default function ChatPage() {
         ) : (
           /* ── Conversation state: messages scroll, input pinned to bottom ── */
           <>
+            {/* Clear Chat button — upper right */}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '12px 16px 0' }}>
+              <button
+                type="button"
+                onClick={() => { setMessages([]); setViewerDoc(null); setScope(null); }}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  padding: '6px 14px',
+                  fontSize: 13,
+                  fontFamily: 'var(--font-body)',
+                  color: 'var(--color-text-secondary)',
+                  background: 'transparent',
+                  border: '1px solid var(--color-border-mid)',
+                  borderRadius: 8,
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease',
+                }}
+                onMouseEnter={e => { e.currentTarget.style.color = 'var(--color-text-primary)'; e.currentTarget.style.borderColor = 'var(--color-text-secondary)'; }}
+                onMouseLeave={e => { e.currentTarget.style.color = 'var(--color-text-secondary)'; e.currentTarget.style.borderColor = 'var(--color-border-mid)'; }}
+              >
+                <RotateCcw size={14} />
+                Clear Chat
+              </button>
+            </div>
             <div
               ref={scrollRef}
               onScroll={handleScroll}

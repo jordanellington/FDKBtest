@@ -1110,17 +1110,14 @@ app.post('/api/rag/build-section', requireAuth, async (req, res) => {
     const docs = maxDocs ? toProcess.slice(0, maxDocs) : toProcess;
     const total = skipped + docs.length;
 
-    send({ type: 'status', message: `Found ${allDocs.length} documents. ${skipped} already indexed. Processing ${docs.length}...` });
+    const CONCURRENCY = 5;
+    send({ type: 'status', message: `Found ${allDocs.length} documents. ${skipped} already indexed. Processing ${docs.length} (${CONCURRENCY} concurrent)...` });
 
     const scriptPath = path.join(__dirname, '../scripts/extract_text.py');
-    let indexed = 0, errors = 0;
+    let indexed = 0, errors = 0, completed = 0;
 
-    for (let i = 0; i < docs.length; i++) {
-      const doc = docs[i];
-      const current = skipped + i + 1;
-
-      send({ type: 'progress', current, total, name: doc.name, indexed, skipped, errors });
-
+    // Process a single document — returns true if indexed, false if error/skipped
+    async function processDoc(doc) {
       try {
         const [pdfResp, nodeResp] = await Promise.all([
           alfrescoFetch(
@@ -1149,7 +1146,7 @@ app.post('/api/rag/build-section', requireAuth, async (req, res) => {
 
         if (!text || text.trim().length < 50) {
           errors++;
-          continue;
+          return;
         }
 
         const chunks = chunkDocument(text);
@@ -1159,8 +1156,21 @@ app.post('/api/rag/build-section', requireAuth, async (req, res) => {
       } catch (err) {
         console.error(`[rag-build-section] Error on ${doc.name}:`, err.message);
         errors++;
+      } finally {
+        completed++;
+        send({ type: 'progress', current: skipped + completed, total, name: doc.name, indexed, skipped, errors });
       }
     }
+
+    // Concurrency pool: run up to CONCURRENCY docs at a time
+    let cursor = 0;
+    async function worker() {
+      while (cursor < docs.length) {
+        const doc = docs[cursor++];
+        await processDoc(doc);
+      }
+    }
+    await Promise.all(Array.from({ length: Math.min(CONCURRENCY, docs.length) }, () => worker()));
 
     loadCorpusIndex();
 

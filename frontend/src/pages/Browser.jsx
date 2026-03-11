@@ -147,17 +147,17 @@ export default function Browser() {
     }
   };
 
-  const handleBuildSection = async () => {
+  const handleBuildSection = async (maxDocs) => {
     setDiscoverResult(null);
     setIndexing({ current: 0, total: 0, name: '', indexed: 0, errors: 0, status: 'Starting...' });
     await buildSectionIndex(currentId, {
+      maxDocs: maxDocs || undefined,
       onProgress: (data) => {
         if (data.type === 'status') setIndexing(prev => ({ ...prev, status: data.message }));
         else setIndexing(prev => ({ ...prev, ...data, status: null }));
       },
       onComplete: (data) => {
         setIndexing(null);
-        // Refresh folder stats
         getFolderStats(currentId).then(setFolderStats).catch(() => {});
       },
       onError: (msg) => {
@@ -285,16 +285,34 @@ export default function Browser() {
                       </button>
                     </div>
                     {discoverResult.toIndex > 0 && (
-                      <button
-                        onClick={handleBuildSection}
-                        className="text-[12px] font-semibold px-4 py-2 rounded-md transition-colors"
-                        style={{
-                          background: 'var(--color-accent)',
-                          color: 'var(--color-bg-primary)',
-                        }}
-                      >
-                        Start Indexing
-                      </button>
+                      <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-2">
+                          <label className="text-[11px] text-text-muted">Batch size:</label>
+                          <input
+                            type="number"
+                            defaultValue={100}
+                            min={1}
+                            max={discoverResult.toIndex}
+                            id="batchSizeInput"
+                            className="w-20 px-2 py-1 text-[12px] rounded border bg-transparent text-text-primary"
+                            style={{ borderColor: 'var(--color-border)' }}
+                          />
+                          <span className="text-[11px] text-text-dim">0 = all</span>
+                        </div>
+                        <button
+                          onClick={() => {
+                            const val = parseInt(document.getElementById('batchSizeInput')?.value) || 0;
+                            handleBuildSection(val);
+                          }}
+                          className="text-[12px] font-semibold px-4 py-2 rounded-md transition-colors"
+                          style={{
+                            background: 'var(--color-accent)',
+                            color: 'var(--color-bg-primary)',
+                          }}
+                        >
+                          Start Indexing
+                        </button>
+                      </div>
                     )}
                   </div>
                 )}

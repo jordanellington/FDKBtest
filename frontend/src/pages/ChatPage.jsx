@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
-import { Send, ChevronDown, ChevronUp, FileText, Sparkles, Plus, X, Check } from 'lucide-react';
+import { Send, Square, ChevronDown, ChevronUp, FileText, Sparkles, Plus, X, Check } from 'lucide-react';
 import Markdown from 'react-markdown';
 import { chatFdkbStream } from '../lib/api';
 import DocumentViewer from '../components/DocumentViewer';
@@ -85,6 +85,7 @@ export default function ChatPage() {
   const scrollRef = useRef(null);
   const inputRef = useRef(null);
   const userScrolledUp = useRef(false);
+  const abortRef = useRef(null);
 
   useEffect(() => {
     localStorage.setItem('fdkb_chat_model', model);
@@ -123,8 +124,22 @@ export default function ChatPage() {
     });
   };
 
+  const stopStreaming = () => {
+    if (abortRef.current) abortRef.current.abort();
+    setMessages(prev => {
+      const updated = [...prev];
+      const last = updated[updated.length - 1];
+      if (last?.streaming) updated[updated.length - 1] = { ...last, streaming: false };
+      return updated;
+    });
+    setStreaming(false);
+  };
+
   const sendMessage = async (text) => {
     if (!text.trim() || streaming) return;
+
+    const controller = new AbortController();
+    abortRef.current = controller;
 
     const userMsg = { role: 'user', content: text };
     const newMessages = [...messages, userMsg];
@@ -138,6 +153,7 @@ export default function ChatPage() {
     await chatFdkbStream(newMessages, {
       model,
       folderNodeId,
+      signal: controller.signal,
       onDelta: (delta) => {
         accumulated += delta;
         setMessages(prev => {
@@ -294,24 +310,39 @@ export default function ChatPage() {
 
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <ModelSelector model={model} onChange={setModel} disabled={streaming} />
-              {input.trim() && (
+              {streaming ? (
                 <button
-                  type="submit"
-                  disabled={streaming}
+                  type="button"
+                  onClick={stopStreaming}
                   style={{
                     background: 'var(--color-accent)',
                     border: 'none',
                     borderRadius: 8,
                     padding: '6px 8px',
-                    cursor: streaming ? 'default' : 'pointer',
+                    cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
-                    opacity: streaming ? 0.5 : 1,
+                  }}
+                  title="Stop generating"
+                >
+                  <Square size={12} fill="var(--color-bg-primary)" style={{ color: 'var(--color-bg-primary)' }} />
+                </button>
+              ) : input.trim() ? (
+                <button
+                  type="submit"
+                  style={{
+                    background: 'var(--color-accent)',
+                    border: 'none',
+                    borderRadius: 8,
+                    padding: '6px 8px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
                   }}
                 >
                   <Send size={14} style={{ color: 'var(--color-bg-primary)' }} />
                 </button>
-              )}
+              ) : null}
             </div>
           </div>
         </div>

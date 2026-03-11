@@ -294,7 +294,7 @@ export async function chatStream(messages, doc, onDelta, onDone, onError, onStat
   }
 }
 
-export async function chatFdkbStream(messages, { onDelta, onDone, onError, onStatus, onSources, model, folderNodeId }) {
+export async function chatFdkbStream(messages, { onDelta, onDone, onError, onStatus, onSources, model, folderNodeId, signal }) {
   const body = { messages, model };
   if (folderNodeId) body.folderNodeId = folderNodeId;
   const resp = await fetch(`${API_URL}/api/chat/fdkb`, {
@@ -304,6 +304,7 @@ export async function chatFdkbStream(messages, { onDelta, onDone, onError, onSta
       'x-session-id': sessionId || '',
     },
     body: JSON.stringify(body),
+    signal,
   });
 
   if (resp.status === 401) {
@@ -321,25 +322,30 @@ export async function chatFdkbStream(messages, { onDelta, onDone, onError, onSta
   const decoder = new TextDecoder();
   let buffer = '';
 
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
 
-    buffer += decoder.decode(value, { stream: true });
-    const lines = buffer.split('\n');
-    buffer = lines.pop();
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop();
 
-    for (const line of lines) {
-      if (line.startsWith('data: ')) {
-        try {
-          const data = JSON.parse(line.slice(6));
-          if (data.type === 'delta') onDelta(data.text);
-          else if (data.type === 'done') onDone();
-          else if (data.type === 'error') onError(data.message);
-          else if (data.type === 'status' && onStatus) onStatus(data.message);
-          else if (data.type === 'sources' && onSources) onSources(data.documents);
-        } catch {}
+      for (const line of lines) {
+        if (line.startsWith('data: ')) {
+          try {
+            const data = JSON.parse(line.slice(6));
+            if (data.type === 'delta') onDelta(data.text);
+            else if (data.type === 'done') onDone();
+            else if (data.type === 'error') onError(data.message);
+            else if (data.type === 'status' && onStatus) onStatus(data.message);
+            else if (data.type === 'sources' && onSources) onSources(data.documents);
+          } catch {}
+        }
       }
     }
+  } catch (err) {
+    if (err.name === 'AbortError') return; // stopped by user — ChatPage handles cleanup
+    throw err;
   }
 }

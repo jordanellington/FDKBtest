@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getChildren, getNode, getFolderStats } from '../lib/api';
@@ -54,6 +54,8 @@ export default function Browser() {
   const [selectedDoc, setSelectedDoc] = useState(null);
   const [pagination, setPagination] = useState(null);
   const [folderStats, setFolderStats] = useState(null);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const sentinelRef = useRef(null);
   const currentId = nodeId || 'root';
   const isRoot = currentId === 'root';
 
@@ -84,6 +86,37 @@ export default function Browser() {
     }
     load();
   }, [currentId]);
+
+  // Infinite scroll: load next page
+  const loadMore = useCallback(async () => {
+    if (loadingMore || !pagination?.hasMoreItems) return;
+    setLoadingMore(true);
+    try {
+      const data = await getChildren(currentId, {
+        maxItems: 100,
+        skipCount: items.length,
+      });
+      const newEntries = data.list?.entries?.map(e => e.entry) || [];
+      setItems(prev => [...prev, ...newEntries]);
+      setPagination(data.list?.pagination);
+    } catch (err) {
+      console.error('Load more error:', err);
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [currentId, items.length, loadingMore, pagination]);
+
+  // Intersection observer for infinite scroll sentinel
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    if (!sentinel) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting) loadMore(); },
+      { rootMargin: '200px' }
+    );
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [loadMore]);
 
   const folders = items.filter(i => i.isFolder);
   const files = items.filter(i => i.isFile);
@@ -400,7 +433,7 @@ export default function Browser() {
               {files.length > 0 && (
                 <div>
                   <p className="text-[10px] text-text-muted uppercase tracking-wider font-semibold" style={{ marginBottom: 16 }}>
-                    Documents ({files.length})
+                    Documents ({pagination?.totalItems ? pagination.totalItems - folders.length : files.length})
                   </p>
                   <div>
                     {files.map((file, i) => {
@@ -502,9 +535,17 @@ export default function Browser() {
                 </div>
               )}
 
-              {pagination && (
+              {/* Infinite scroll sentinel */}
+              {pagination?.hasMoreItems && (
+                <div ref={sentinelRef} className="flex justify-center py-8">
+                  {loadingMore && (
+                    <div className="w-5 h-5 border-2 border-accent/20 border-t-accent rounded-full animate-spin" />
+                  )}
+                </div>
+              )}
+              {pagination && !pagination.hasMoreItems && items.length > 100 && (
                 <p className="mt-4 text-xs text-text-muted text-center">
-                  Showing {items.length} of {pagination.totalItems} items
+                  {pagination.totalItems} items
                 </p>
               )}
             </div>

@@ -552,6 +552,37 @@ app.get('/api/stats', requireAuth, async (req, res) => {
   }
 });
 
+app.get('/api/stats/:nodeId', requireAuth, async (req, res) => {
+  const { nodeId } = req.params;
+  try {
+    const [searchResp, indexedCount] = await Promise.all([
+      alfrescoPost(
+        `${ALFRESCO_API}/search/versions/1/search`,
+        req.session,
+        {
+          query: {
+            query: `ANCESTOR:"workspace://SpacesStore/${nodeId}" AND TYPE:content`,
+            language: 'afts'
+          },
+          paging: { maxItems: 0 }
+        }
+      ),
+      Promise.resolve(db.countDocsByFolder(nodeId)),
+    ]);
+
+    const data = await searchResp.json();
+
+    res.json({
+      totalDocuments: data.list?.pagination?.totalItems ?? 0,
+      indexedDocuments: indexedCount,
+    });
+  } catch (err) {
+    if (handleAlfrescoExpiry(err, req, res)) return;
+    console.error('Folder stats error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // --------------- AI Chat (AWS Bedrock) ---------------
 
 const bedrockClient = process.env.AWS_BEDROCK_ACCESS_KEY_ID

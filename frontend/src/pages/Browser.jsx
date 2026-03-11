@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { getChildren, getNode } from '../lib/api';
+import { getChildren, getNode, getFolderStats } from '../lib/api';
+import Counter from '../components/Counter';
 import DocumentViewer from '../components/DocumentViewer';
 import { Folder, FileText, ChevronRight, Home, ArrowLeft, Layers, MessageSquare } from 'lucide-react';
 import { classifyDocument, extractMetadata } from '../lib/copyright';
@@ -52,8 +53,16 @@ export default function Browser() {
   const [loading, setLoading] = useState(true);
   const [selectedDoc, setSelectedDoc] = useState(null);
   const [pagination, setPagination] = useState(null);
+  const [folderStats, setFolderStats] = useState(null);
   const currentId = nodeId || 'root';
   const isRoot = currentId === 'root';
+
+  // Async folder stats (non-blocking)
+  useEffect(() => {
+    if (currentId === 'root') { setFolderStats(null); return; }
+    setFolderStats(null);
+    getFolderStats(currentId).then(setFolderStats).catch(() => {});
+  }, [currentId]);
 
   useEffect(() => {
     async function load() {
@@ -111,26 +120,79 @@ export default function Browser() {
               <p className="text-text-muted text-[14px]">Browse the complete FDKB document library</p>
             </motion.div>
           ) : (
-            <motion.div
-              initial={{ opacity: 0, y: 6 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3 }}
-              className="page-section flex items-center gap-3"
-              style={{ padding: '20px 56px 0', marginBottom: 20 }}
-            >
-              <button
-                onClick={() => {
-                  if (currentNode?.parentId) handleNavigate(currentNode.parentId);
-                  else handleNavigate('root');
-                }}
-                className="p-1.5 rounded-md text-text-muted hover:text-accent hover:bg-bg-elevated transition-colors shrink-0"
+            <>
+              {/* Breadcrumb row */}
+              <motion.div
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3 }}
+                className="page-section flex items-center gap-3"
+                style={{ padding: '20px 56px 0', marginBottom: 0 }}
               >
-                <ArrowLeft size={15} />
-              </button>
-              <div className="flex items-center gap-2 min-w-0">
-                <Breadcrumbs path={currentNode?.path} onNavigate={handleNavigate} />
-              </div>
-            </motion.div>
+                <button
+                  onClick={() => {
+                    if (currentNode?.parentId) handleNavigate(currentNode.parentId);
+                    else handleNavigate('root');
+                  }}
+                  className="p-1.5 rounded-md text-text-muted hover:text-accent hover:bg-bg-elevated transition-colors shrink-0"
+                >
+                  <ArrowLeft size={15} />
+                </button>
+                <div className="flex items-center gap-2 min-w-0">
+                  <Breadcrumbs path={currentNode?.path} onNavigate={handleNavigate} />
+                </div>
+              </motion.div>
+
+              {/* Folder hero with stats */}
+              <motion.div
+                initial={{ opacity: 0, y: 14 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.45 }}
+                className="page-section-hero"
+                style={{ padding: '8px 56px 0', marginBottom: 32 }}
+              >
+                <h1 className="page-title font-display text-[36px] font-light text-text-primary leading-[1.08] tracking-[-0.02em]"
+                  style={{ marginBottom: 14 }}>
+                  {currentNode?.name}
+                </h1>
+
+                <div className="stats-row flex flex-wrap items-baseline"
+                  style={{ gap: 48, paddingBottom: 20, borderBottom: '1px solid var(--color-border)' }}>
+                  {folders.length > 0 && (
+                    <div className="flex items-baseline" style={{ gap: 10 }}>
+                      <span className="stats-number font-display text-[28px] font-light text-accent-bright leading-none">
+                        {folders.length}
+                      </span>
+                      <span className="text-[10px] font-semibold tracking-[0.1em] text-text-muted uppercase">Subfolders</span>
+                    </div>
+                  )}
+                  {files.length > 0 && (
+                    <div className="flex items-baseline" style={{ gap: 10 }}>
+                      <span className="stats-number font-display text-[28px] font-light text-accent-bright leading-none">
+                        {files.length}
+                      </span>
+                      <span className="text-[10px] font-semibold tracking-[0.1em] text-text-muted uppercase">Files</span>
+                    </div>
+                  )}
+                  {folderStats && folderStats.totalDocuments > 0 && (
+                    <div className="flex items-baseline" style={{ gap: 10 }}>
+                      <span className="stats-number font-display text-[28px] font-light text-accent-bright leading-none">
+                        <Counter target={folderStats.totalDocuments} duration={1000} />
+                      </span>
+                      <span className="text-[10px] font-semibold tracking-[0.1em] text-text-muted uppercase">Total Documents</span>
+                    </div>
+                  )}
+                  {folderStats && folderStats.indexedDocuments > 0 && (
+                    <div className="flex items-baseline" style={{ gap: 10 }}>
+                      <span className="stats-number font-display text-[28px] font-light text-accent-bright leading-none">
+                        <Counter target={folderStats.indexedDocuments} duration={1000} />
+                      </span>
+                      <span className="text-[10px] font-semibold tracking-[0.1em] text-text-muted uppercase">Indexed</span>
+                    </div>
+                  )}
+                </div>
+              </motion.div>
+            </>
           )}
 
           {loading ? (

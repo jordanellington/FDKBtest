@@ -115,6 +115,11 @@ export async function getStats() {
   return resp.json();
 }
 
+export async function getFolderStats(nodeId) {
+  const resp = await request(`/api/stats/${nodeId}`);
+  return resp.json();
+}
+
 export async function getChildren(nodeId = 'root', options = {}) {
   const params = new URLSearchParams({
     maxItems: options.maxItems || 100,

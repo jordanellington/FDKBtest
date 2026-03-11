@@ -91,6 +91,11 @@ const stmts = {
     ORDER BY d.id, c.seq
   `),
 
+  countDocsByFolder: db.prepare(`
+    SELECT COUNT(*) as count FROM documents
+    WHERE folder_path LIKE '%' || @folderNodeId || '%'
+  `),
+
   clearAll: db.prepare('DELETE FROM documents'),
 };
 
@@ -174,6 +179,11 @@ export default {
       docId: row.node_id,
       docName: row.name,
     }));
+  },
+
+  /** Count indexed documents under a folder (any depth) */
+  countDocsByFolder(folderNodeId) {
+    return stmts.countDocsByFolder.get({ folderNodeId })?.count || 0;
   },
 
   /** Clear all data */

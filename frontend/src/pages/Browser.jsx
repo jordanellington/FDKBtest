@@ -222,41 +222,7 @@ export default function Browser() {
                   {currentNode?.name}
                 </h1>
 
-                <div className="stats-row flex flex-wrap items-baseline"
-                  style={{ gap: 48, paddingBottom: 20, borderBottom: '1px solid var(--color-border)' }}>
-                  {folders.length > 0 && (
-                    <div className="flex items-baseline" style={{ gap: 10 }}>
-                      <span className="stats-number font-body text-[26px] font-semibold text-accent-bright leading-none" style={{ fontVariantNumeric: 'tabular-nums' }}>
-                        {folders.length}
-                      </span>
-                      <span className="text-[10px] font-semibold tracking-[0.1em] text-text-muted uppercase">Subfolders</span>
-                    </div>
-                  )}
-                  {folderStats && folderStats.totalDocuments > 0 && (
-                    <div className="flex items-baseline" style={{ gap: 10 }}>
-                      <span className="stats-number font-body text-[26px] font-semibold text-accent-bright leading-none" style={{ fontVariantNumeric: 'tabular-nums' }}>
-                        <Counter target={folderStats.totalDocuments} duration={1000} />
-                      </span>
-                      <span className="text-[10px] font-semibold tracking-[0.1em] text-text-muted uppercase">Documents</span>
-                    </div>
-                  )}
-                  {folders.length > 0 && !indexing && (
-                    <button
-                      onClick={handleDiscover}
-                      disabled={discovering}
-                      className="flex items-center gap-1.5 text-[11px] font-semibold tracking-[0.05em] uppercase px-3 py-1.5 rounded-md transition-colors ml-auto"
-                      style={{
-                        color: 'var(--color-accent)',
-                        border: '1px solid color-mix(in srgb, var(--color-accent) 30%, transparent)',
-                        background: 'color-mix(in srgb, var(--color-accent) 5%, transparent)',
-                        opacity: discovering ? 0.6 : 1,
-                      }}
-                    >
-                      <Database size={12} />
-                      {discovering ? 'Scanning...' : 'Index Section'}
-                    </button>
-                  )}
-                </div>
+                <div style={{ paddingBottom: 20, borderBottom: '1px solid var(--color-border)' }} />
 
                 {/* Discover result confirmation */}
                 {discoverResult && (

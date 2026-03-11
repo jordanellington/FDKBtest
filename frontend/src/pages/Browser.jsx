@@ -22,11 +22,7 @@ function Breadcrumbs({ path, onNavigate }) {
       {visible.map((el, i) => (
         <span key={el.id} className="flex items-center gap-1.5">
           <ChevronRight size={11} className="text-text-dim" />
-          {i === visible.length - 1 ? (
-            <span className="text-text-primary font-semibold text-[15px]">{el.name}</span>
-          ) : (
-            <button onClick={() => onNavigate(el.id)} className="text-text-muted hover:text-accent transition-colors">{el.name}</button>
-          )}
+          <button onClick={() => onNavigate(el.id)} className="text-text-muted hover:text-accent transition-colors">{el.name}</button>
         </span>
       ))}
     </div>

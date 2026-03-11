@@ -995,6 +995,182 @@ app.post('/api/rag/build-index', requireAuth, async (req, res) => {
   }
 });
 
+// --------------- Dynamic Document Discovery & Section Indexing ---------------
+
+app.post('/api/rag/discover', requireAuth, async (req, res) => {
+  const { nodeId } = req.body || {};
+  if (!nodeId) return res.status(400).json({ error: 'nodeId is required' });
+
+  try {
+    const allDocs = [];
+    let skipCount = 0;
+    const maxItems = 100;
+    let totalItems = null;
+
+    // Paginate through ANCESTOR search to collect all descendant documents
+    while (totalItems === null || skipCount < totalItems) {
+      const searchResp = await alfrescoPost(
+        `${ALFRESCO_API}/search/versions/1/search`,
+        req.session,
+        {
+          query: {
+            query: `ANCESTOR:"workspace://SpacesStore/${nodeId}" AND TYPE:content`,
+            language: 'afts'
+          },
+          paging: { maxItems, skipCount }
+        }
+      );
+      const data = await searchResp.json();
+      totalItems = data.list?.pagination?.totalItems ?? 0;
+      const entries = data.list?.entries || [];
+      for (const e of entries) {
+        allDocs.push({
+          nodeId: e.entry.id,
+          name: e.entry.name,
+          size: e.entry.content?.sizeInBytes || 0,
+          modifiedAt: e.entry.modifiedAt,
+          indexed: isIndexed(e.entry.id),
+        });
+      }
+      skipCount += maxItems;
+    }
+
+    const alreadyIndexed = allDocs.filter(d => d.indexed).length;
+    res.json({
+      totalDocuments: allDocs.length,
+      alreadyIndexed,
+      toIndex: allDocs.length - alreadyIndexed,
+      documents: allDocs,
+    });
+  } catch (err) {
+    if (handleAlfrescoExpiry(err, req, res)) return;
+    console.error('[rag-discover] Error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/rag/build-section', requireAuth, async (req, res) => {
+  if (buildInProgress) {
+    return res.status(409).json({ error: 'Index build already in progress' });
+  }
+  if (!bedrockClient) {
+    return res.status(500).json({ error: 'AWS Bedrock not configured' });
+  }
+
+  const { nodeId, maxDocs } = req.body || {};
+  if (!nodeId) return res.status(400).json({ error: 'nodeId is required' });
+
+  buildInProgress = true;
+
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+
+  const send = (data) => res.write(`data: ${JSON.stringify(data)}\n\n`);
+  const session = req.session;
+  const SHARE_API_PROXY = `${ALFRESCO_BASE}/share/proxy/alfresco-api/-default-/public`;
+
+  try {
+    send({ type: 'status', message: 'Discovering documents...' });
+
+    // Collect all descendant documents via ANCESTOR search
+    const allDocs = [];
+    let skipCount = 0;
+    const maxItems = 100;
+    let totalItems = null;
+
+    while (totalItems === null || skipCount < totalItems) {
+      const searchResp = await alfrescoPost(
+        `${ALFRESCO_API}/search/versions/1/search`,
+        session,
+        {
+          query: {
+            query: `ANCESTOR:"workspace://SpacesStore/${nodeId}" AND TYPE:content`,
+            language: 'afts'
+          },
+          paging: { maxItems, skipCount }
+        }
+      );
+      const data = await searchResp.json();
+      totalItems = data.list?.pagination?.totalItems ?? 0;
+      const entries = data.list?.entries || [];
+      for (const e of entries) {
+        allDocs.push({ nodeId: e.entry.id, name: e.entry.name });
+      }
+      skipCount += maxItems;
+    }
+
+    // Filter out already-indexed docs
+    const toProcess = allDocs.filter(d => !isIndexed(d.nodeId));
+    const skipped = allDocs.length - toProcess.length;
+    const docs = maxDocs ? toProcess.slice(0, maxDocs) : toProcess;
+    const total = skipped + docs.length;
+
+    send({ type: 'status', message: `Found ${allDocs.length} documents. ${skipped} already indexed. Processing ${docs.length}...` });
+
+    const scriptPath = path.join(__dirname, '../scripts/extract_text.py');
+    let indexed = 0, errors = 0;
+
+    for (let i = 0; i < docs.length; i++) {
+      const doc = docs[i];
+      const current = skipped + i + 1;
+
+      send({ type: 'progress', current, total, name: doc.name, indexed, skipped, errors });
+
+      try {
+        const [pdfResp, nodeResp] = await Promise.all([
+          alfrescoFetch(
+            `${SHARE_API_PROXY}/alfresco/versions/1/nodes/${doc.nodeId}/content`,
+            session
+          ),
+          alfrescoFetch(
+            `${SHARE_API_PROXY}/alfresco/versions/1/nodes/${doc.nodeId}?include=path`,
+            session
+          ),
+        ]);
+        if (!pdfResp.ok) throw new Error(`Fetch failed: ${pdfResp.status}`);
+        const pdfBuffer = Buffer.from(await pdfResp.arrayBuffer());
+
+        let folderNodeId = null, folderPath = null;
+        try {
+          const nodeData = await nodeResp.json();
+          const pathElements = nodeData?.entry?.path?.elements || [];
+          if (pathElements.length > 0) {
+            folderNodeId = pathElements[pathElements.length - 1].id;
+            folderPath = pathElements.map(el => el.id).join('|');
+          }
+        } catch (_) { /* path fetch failed — continue without folder info */ }
+
+        const text = await extractTextFromPdf(pdfBuffer, scriptPath);
+
+        if (!text || text.trim().length < 50) {
+          errors++;
+          continue;
+        }
+
+        const chunks = chunkDocument(text);
+        const embeddings = await embedChunks(chunks, bedrockClient);
+        saveToDB(doc.nodeId, doc.name, 'unknown', { chunks, embeddings }, { folderNodeId, folderPath });
+        indexed++;
+      } catch (err) {
+        console.error(`[rag-build-section] Error on ${doc.name}:`, err.message);
+        errors++;
+      }
+    }
+
+    loadCorpusIndex();
+
+    send({ type: 'complete', indexed, skipped, errors, total: allDocs.length });
+    res.end();
+  } catch (err) {
+    console.error('[rag-build-section] Fatal error:', err);
+    send({ type: 'error', message: err.message });
+    res.end();
+  } finally {
+    buildInProgress = false;
+  }
+});
+
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`FDKB Navigator backend running on port ${PORT}`);
 

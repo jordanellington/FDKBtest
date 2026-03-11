@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { getChildren, getNode, getFolderStats } from '../lib/api';
+import { getChildren, getNode, getFolderStats, discoverDocuments, buildSectionIndex } from '../lib/api';
 import Counter from '../components/Counter';
 import DocumentViewer from '../components/DocumentViewer';
-import { Folder, FileText, ChevronRight, Home, ArrowLeft, Layers, MessageSquare } from 'lucide-react';
+import { Folder, FileText, ChevronRight, Home, ArrowLeft, Layers, MessageSquare, Database, X } from 'lucide-react';
 import { classifyDocument, extractMetadata } from '../lib/copyright';
 
 function Breadcrumbs({ path, onNavigate }) {
@@ -51,6 +51,9 @@ export default function Browser() {
   const [pagination, setPagination] = useState(null);
   const [folderStats, setFolderStats] = useState(null);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [discovering, setDiscovering] = useState(false);
+  const [discoverResult, setDiscoverResult] = useState(null);
+  const [indexing, setIndexing] = useState(null); // { current, total, name, indexed, errors } or null
   const sentinelRef = useRef(null);
   const currentId = nodeId || 'root';
   const isRoot = currentId === 'root';
@@ -129,6 +132,39 @@ export default function Browser() {
   const handleNavigate = (id) => {
     if (id === 'root') navigate('/browse');
     else navigate(`/browse/${id}`);
+  };
+
+  const handleDiscover = async () => {
+    setDiscovering(true);
+    setDiscoverResult(null);
+    try {
+      const result = await discoverDocuments(currentId);
+      setDiscoverResult(result);
+    } catch (err) {
+      console.error('Discover error:', err);
+    } finally {
+      setDiscovering(false);
+    }
+  };
+
+  const handleBuildSection = async () => {
+    setDiscoverResult(null);
+    setIndexing({ current: 0, total: 0, name: '', indexed: 0, errors: 0, status: 'Starting...' });
+    await buildSectionIndex(currentId, {
+      onProgress: (data) => {
+        if (data.type === 'status') setIndexing(prev => ({ ...prev, status: data.message }));
+        else setIndexing(prev => ({ ...prev, ...data, status: null }));
+      },
+      onComplete: (data) => {
+        setIndexing(null);
+        // Refresh folder stats
+        getFolderStats(currentId).then(setFolderStats).catch(() => {});
+      },
+      onError: (msg) => {
+        console.error('Build section error:', msg);
+        setIndexing(null);
+      },
+    });
   };
 
   return (
@@ -212,7 +248,86 @@ export default function Browser() {
                       <span className="text-[10px] font-semibold tracking-[0.1em] text-text-muted uppercase">Indexed</span>
                     </div>
                   )}
+                  {folders.length > 0 && !indexing && (
+                    <button
+                      onClick={handleDiscover}
+                      disabled={discovering}
+                      className="flex items-center gap-1.5 text-[11px] font-semibold tracking-[0.05em] uppercase px-3 py-1.5 rounded-md transition-colors ml-auto"
+                      style={{
+                        color: 'var(--color-accent)',
+                        border: '1px solid color-mix(in srgb, var(--color-accent) 30%, transparent)',
+                        background: 'color-mix(in srgb, var(--color-accent) 5%, transparent)',
+                        opacity: discovering ? 0.6 : 1,
+                      }}
+                    >
+                      <Database size={12} />
+                      {discovering ? 'Scanning...' : 'Index Section'}
+                    </button>
+                  )}
                 </div>
+
+                {/* Discover result confirmation */}
+                {discoverResult && (
+                  <div className="mt-4 p-4 rounded-lg" style={{ background: 'var(--color-bg-elevated)', border: '1px solid var(--color-border)' }}>
+                    <div className="flex items-start justify-between mb-3">
+                      <div>
+                        <p className="text-[14px] font-medium text-text-primary mb-1">
+                          {discoverResult.toIndex > 0
+                            ? `${discoverResult.toIndex.toLocaleString()} documents to index`
+                            : 'All documents already indexed'}
+                        </p>
+                        <p className="text-[12px] text-text-muted">
+                          {discoverResult.totalDocuments.toLocaleString()} total &middot; {discoverResult.alreadyIndexed.toLocaleString()} already indexed
+                        </p>
+                      </div>
+                      <button onClick={() => setDiscoverResult(null)} className="text-text-dim hover:text-text-muted transition-colors p-1">
+                        <X size={14} />
+                      </button>
+                    </div>
+                    {discoverResult.toIndex > 0 && (
+                      <button
+                        onClick={handleBuildSection}
+                        className="text-[12px] font-semibold px-4 py-2 rounded-md transition-colors"
+                        style={{
+                          background: 'var(--color-accent)',
+                          color: 'var(--color-bg-primary)',
+                        }}
+                      >
+                        Start Indexing
+                      </button>
+                    )}
+                  </div>
+                )}
+
+                {/* Indexing progress */}
+                {indexing && (
+                  <div className="mt-4 p-4 rounded-lg" style={{ background: 'var(--color-bg-elevated)', border: '1px solid var(--color-border)' }}>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-[13px] font-medium text-text-primary">
+                        {indexing.status || `Indexing: ${indexing.name}`}
+                      </span>
+                      <span className="text-[11px] text-text-muted">
+                        {indexing.total > 0 ? `${indexing.current} / ${indexing.total}` : ''}
+                      </span>
+                    </div>
+                    {indexing.total > 0 && (
+                      <div className="w-full h-1.5 rounded-full overflow-hidden" style={{ background: 'var(--color-bg-primary)' }}>
+                        <div
+                          className="h-full rounded-full transition-all duration-300"
+                          style={{
+                            width: `${Math.round((indexing.current / indexing.total) * 100)}%`,
+                            background: 'var(--color-accent)',
+                          }}
+                        />
+                      </div>
+                    )}
+                    {(indexing.indexed > 0 || indexing.errors > 0) && (
+                      <p className="text-[11px] text-text-muted mt-2">
+                        {indexing.indexed} indexed &middot; {indexing.errors} errors &middot; {indexing.skipped || 0} skipped
+                      </p>
+                    )}
+                  </div>
+                )}
               </motion.div>
             </>
           )}

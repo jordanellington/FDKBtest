@@ -190,6 +190,55 @@ export async function buildRagIndex(onProgress, onComplete, onError, { clearExis
   }
 }
 
+export async function discoverDocuments(nodeId) {
+  const resp = await request('/api/rag/discover', {
+    method: 'POST',
+    body: JSON.stringify({ nodeId }),
+  });
+  return resp.json();
+}
+
+export async function buildSectionIndex(nodeId, { maxDocs, onProgress, onComplete, onError } = {}) {
+  const resp = await fetch(`${API_URL}/api/rag/build-section`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-session-id': sessionId || '',
+    },
+    body: JSON.stringify({ nodeId, maxDocs }),
+  });
+
+  if (!resp.ok) {
+    const err = await resp.json().catch(() => ({ error: 'Build request failed' }));
+    if (onError) onError(err.error || 'Build request failed');
+    return;
+  }
+
+  const reader = resp.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split('\n');
+    buffer = lines.pop();
+
+    for (const line of lines) {
+      if (line.startsWith('data: ')) {
+        try {
+          const data = JSON.parse(line.slice(6));
+          if (data.type === 'progress' || data.type === 'status') { if (onProgress) onProgress(data); }
+          else if (data.type === 'complete') { if (onComplete) onComplete(data); }
+          else if (data.type === 'error') { if (onError) onError(data.message); }
+        } catch {}
+      }
+    }
+  }
+}
+
 export function getContentUrl(nodeId, download = false) {
   return `${API_URL}/api/nodes/${nodeId}/content?sid=${sessionId}${download ? '&download=true' : ''}`;
 }

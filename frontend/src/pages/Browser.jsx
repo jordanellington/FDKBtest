@@ -199,6 +199,14 @@ export default function Browser() {
                       <span className="text-[10px] font-semibold tracking-[0.1em] text-text-muted uppercase">Subfolders</span>
                     </div>
                   )}
+                  {pagination && (pagination.totalItems - folders.length) > 0 && (
+                    <div className="flex items-baseline" style={{ gap: 10 }}>
+                      <span className="stats-number font-display text-[28px] font-light text-accent-bright leading-none">
+                        {(pagination.totalItems - folders.length).toLocaleString()}
+                      </span>
+                      <span className="text-[10px] font-semibold tracking-[0.1em] text-text-muted uppercase">Files</span>
+                    </div>
+                  )}
                   {folderStats && folderStats.totalDocuments > 0 && (
                     <div className="flex items-baseline" style={{ gap: 10 }}>
                       <span className="stats-number font-display text-[28px] font-light text-accent-bright leading-none">

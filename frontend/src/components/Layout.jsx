@@ -47,11 +47,11 @@ export default function Layout() {
         <nav className="top-nav-links flex items-center" style={{ marginLeft: 32, gap: 4 }}>
           {mainNav.map(({ to, label, end }) => (
             <NavLink key={to} to={to} end={end}
-              className="text-[13px] transition-all"
+              className="text-[14px] transition-all"
               style={({ isActive }) => ({
                 padding: '6px 16px',
                 borderRadius: 6,
-                fontWeight: isActive ? 600 : 400,
+                fontWeight: isActive ? 600 : 500,
                 color: isActive ? 'var(--color-text-primary)' : 'var(--color-text-secondary)',
                 background: isActive ? 'var(--color-bg-elevated)' : 'transparent',
               })}
@@ -101,11 +101,11 @@ export default function Layout() {
           {mainNav.map(({ to, label, end }) => (
             <NavLink key={to} to={to} end={end}
               onClick={() => setMenuOpen(false)}
-              className="text-[13px] transition-all"
+              className="text-[14px] transition-all"
               style={({ isActive }) => ({
                 padding: '8px 14px',
                 borderRadius: 6,
-                fontWeight: isActive ? 600 : 400,
+                fontWeight: isActive ? 600 : 500,
                 color: isActive ? 'var(--color-text-primary)' : 'var(--color-text-secondary)',
                 background: isActive ? 'var(--color-bg-elevated)' : 'transparent',
               })}

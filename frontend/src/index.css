@@ -543,3 +543,8 @@ html.light .rpv-dark-theme .rpv-core__page-layer { box-shadow: 0 2px 8px rgba(0,
 [data-tooltip]:hover::before {
   opacity: 1;
 }
+
+/* Center page number input in PDF viewer toolbar */
+.rpv-core__textbox-input[type="text"] {
+  text-align: center !important;
+}

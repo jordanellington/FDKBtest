@@ -335,19 +335,17 @@ export default function DocumentViewer({ document: doc, searchQuery, onClose, fi
         borderTop: '1px solid var(--color-border)',
         boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.04)',
       }} className="shrink-0">
-        <div className="viewer-meta-bar flex items-center justify-end" style={{ padding: '8px 12px', gap: 8 }}>
-          {isPdf && (
+        <div className="viewer-meta-bar flex items-center justify-center" style={{ padding: '8px 12px', gap: 8 }}>
+          {isPdf && !chatOpen && (
             <button
-              onClick={() => setChatOpen(!chatOpen)}
-              title={chatOpen ? 'Close AI chat' : 'Chat with document'}
+              onClick={() => setChatOpen(true)}
+              title="Chat with document"
               className="ask-ai-btn shrink-0 inline-flex items-center gap-1.5 text-[11px] font-semibold transition-all"
               style={{
                 padding: '6px 14px',
                 borderRadius: 999,
                 color: '#fff',
-                background: chatOpen
-                  ? 'linear-gradient(135deg, #3d9485, #56BFA8)'
-                  : 'linear-gradient(135deg, #459e8c, #56BFA8)',
+                background: 'linear-gradient(135deg, #459e8c, #56BFA8)',
                 border: 'none',
                 boxShadow: '0 1px 4px rgba(86,191,168,0.3)',
                 cursor: 'pointer',

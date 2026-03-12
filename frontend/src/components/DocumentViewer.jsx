@@ -81,7 +81,7 @@ function PdfViewer({ fileUrl, searchQuery, actionButtons }) {
 
   const toolBtnStyle = {
     background: 'none', border: 'none', cursor: 'pointer',
-    color: 'var(--color-text-muted)', padding: '3px 5px', borderRadius: 4,
+    color: 'var(--color-text-muted)', padding: '5px 8px', borderRadius: 4,
     display: 'flex', alignItems: 'center',
   };
 
@@ -120,8 +120,9 @@ function PdfViewer({ fileUrl, searchQuery, actionButtons }) {
                         background: 'var(--color-bg-secondary)',
                         border: '1px solid var(--color-border)',
                         borderRadius: 7,
-                        padding: '2px 3px',
+                        padding: '3px 5px',
                         gap: 1,
+                        height: 30,
                       }}
                     >
                       <GoToPreviousPage>
@@ -154,18 +155,19 @@ function PdfViewer({ fileUrl, searchQuery, actionButtons }) {
                         background: 'var(--color-bg-secondary)',
                         border: '1px solid var(--color-border)',
                         borderRadius: 7,
-                        padding: '2px 3px',
+                        padding: '3px 5px',
                         gap: 1,
+                        height: 30,
                       }}
                     >
                       <ZoomOut>
-                        {(p) => <button onClick={p.onClick} style={{ ...toolBtnStyle, fontSize: 13, padding: '3px 5px' }}>−</button>}
+                        {(p) => <button onClick={p.onClick} style={{ ...toolBtnStyle, fontSize: 13 }}>−</button>}
                       </ZoomOut>
                       <Zoom>
                         {(p) => <span style={{ color: 'var(--color-text-muted)', fontSize: 10, minWidth: 32, textAlign: 'center' }}>{Math.round(p.scale * 100)}%</span>}
                       </Zoom>
                       <ZoomIn>
-                        {(p) => <button onClick={p.onClick} style={{ ...toolBtnStyle, fontSize: 13, padding: '3px 5px' }}>+</button>}
+                        {(p) => <button onClick={p.onClick} style={{ ...toolBtnStyle, fontSize: 13 }}>+</button>}
                       </ZoomIn>
                     </div>
 

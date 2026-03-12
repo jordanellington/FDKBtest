@@ -18,6 +18,13 @@ const WORKER_URL = new URL(
   import.meta.url,
 ).toString();
 
+function formatDateStr(iso) {
+  if (!iso) return null;
+  const d = new Date(iso);
+  if (isNaN(d)) return null;
+  return d.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+}
+
 function DistributionBadge({ classification }) {
   const config = {
     green: { color: '#4db8a4', bg: 'rgba(77,184,164,0.10)', border: 'rgba(77,184,164,0.20)' },
@@ -257,8 +264,17 @@ export default function DocumentViewer({ document: doc, searchQuery, onClose, fi
         }}
       >
         <div className="flex items-center gap-2.5 min-w-0 flex-1">
-          <FileText size={15} style={{ color: 'var(--color-accent)' }} className="shrink-0" strokeWidth={1.5} />
-          <h2 className="text-[14px] font-semibold truncate" style={{ fontFamily: 'var(--font-display)' }}>{doc.name}</h2>
+          <FileText size={15} style={{ color: 'var(--color-accent)', marginTop: 2 }} className="shrink-0 self-start" strokeWidth={1.5} />
+          <div className="min-w-0">
+            <h2 className="text-[14px] font-semibold truncate" style={{ fontFamily: 'var(--font-display)' }}>
+              {doc.displayTitle && doc.displayTitle !== doc.name ? doc.displayTitle : doc.name}
+            </h2>
+            {(doc.publicationTitle || doc.publicationDate) && (
+              <p className="text-[11px] truncate" style={{ color: 'var(--color-text-muted)', marginTop: 1 }}>
+                {[doc.publicationTitle, doc.publicationDate ? formatDateStr(doc.publicationDate) : null].filter(Boolean).join(' · ')}
+              </p>
+            )}
+          </div>
         </div>
         <div className="flex items-center gap-1.5 shrink-0">
           <DistributionBadge classification={classification} />

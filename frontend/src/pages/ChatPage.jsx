@@ -172,6 +172,9 @@ export default function ChatPage() {
     setViewerDoc({
       id: doc.nodeId,
       name: doc.name,
+      displayTitle: doc.displayTitle,
+      publicationTitle: doc.publicationTitle,
+      publicationDate: doc.publicationDate,
       content: { mimeType: 'application/pdf' },
     });
   };

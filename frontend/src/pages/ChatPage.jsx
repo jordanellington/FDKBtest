@@ -55,9 +55,9 @@ function linkCitations(children, sources, onOpenDoc) {
             textDecorationStyle: 'dotted',
             textUnderlineOffset: 2,
           }}
-          title={source.displayTitle || docName}
+          title={docName}
         >
-          {part}
+          {source.displayTitle || docName}
         </span>
       );
     });
@@ -118,33 +118,51 @@ export default function ChatPage() {
 
   const [searchQuery, setSearchQuery] = useState(null);
 
+  const STOPWORDS = new Set(['the', 'and', 'for', 'that', 'this', 'with', 'from', 'are', 'was', 'were', 'has', 'had', 'have', 'been', 'not', 'but', 'its', 'also', 'which', 'their', 'than', 'into', 'such', 'may', 'can', 'will', 'would', 'could', 'should', 'shall', 'being', 'other', 'more', 'only', 'does', 'did', 'they', 'these', 'those', 'some', 'each', 'about', 'when', 'where', 'what', 'there', 'then', 'most', 'both', 'under', 'over', 'between', 'after', 'before', 'while', 'during', 'through', 'since', 'upon']);
+
+  // Split phrases into individual words, filtering stopwords and short words
+  const phrasesToWords = (phrases) => {
+    const words = new Set();
+    for (const phrase of phrases) {
+      for (const word of phrase.split(/\s+/)) {
+        const clean = word.replace(/[^a-zA-Z0-9'-]/g, '');
+        if (clean.length >= 4 && !STOPWORDS.has(clean.toLowerCase())) {
+          words.add(clean);
+        }
+      }
+    }
+    return words.size > 0 ? [...words] : null;
+  };
+
   const openDoc = (doc) => {
     // Use ref for highlights — always has latest value regardless of React render cycle
     const hl = highlightsRef.current;
-    let docHighlights = hl?.[doc.name] || null;
-    if (!docHighlights && hl) {
-      // Case-insensitive fallback
-      const key = Object.keys(hl).find(k => k.toLowerCase() === doc.name?.toLowerCase());
-      if (key) docHighlights = hl[key];
-    }
-    // Split phrases into individual words for resilient partial matching
-    // Filter out short/common words that would create noise
-    const STOPWORDS = new Set(['the', 'and', 'for', 'that', 'this', 'with', 'from', 'are', 'was', 'were', 'has', 'had', 'have', 'been', 'not', 'but', 'its', 'also', 'which', 'their', 'than', 'into', 'such', 'may', 'can', 'will', 'would', 'could', 'should', 'shall']);
-    let searchTerms = null;
-    if (docHighlights) {
-      const words = new Set();
-      for (const phrase of docHighlights) {
-        for (const word of phrase.split(/\s+/)) {
-          const clean = word.replace(/[^a-zA-Z0-9'-]/g, '');
-          if (clean.length >= 4 && !STOPWORDS.has(clean.toLowerCase())) {
-            words.add(clean);
-          }
+    let docHighlights = null;
+    if (hl && Object.keys(hl).length > 0) {
+      // Try exact match
+      docHighlights = hl[doc.name] || null;
+      // Case-insensitive
+      if (!docHighlights) {
+        const key = Object.keys(hl).find(k => k.toLowerCase() === doc.name?.toLowerCase());
+        if (key) docHighlights = hl[key];
+      }
+      // Partial match — filename stem contained in key or vice versa
+      if (!docHighlights) {
+        const stem = doc.name?.replace(/\.PDF$/i, '').toLowerCase();
+        if (stem) {
+          const key = Object.keys(hl).find(k => {
+            const kStem = k.replace(/\.PDF$/i, '').toLowerCase();
+            return kStem.includes(stem) || stem.includes(kStem);
+          });
+          if (key) docHighlights = hl[key];
         }
       }
-      searchTerms = words.size > 0 ? [...words] : null;
     }
-    console.log('[openDoc] name:', doc.name, 'highlights:', docHighlights, 'searchTerms:', searchTerms);
-    setSearchQuery(searchTerms || (doc.snippet ? doc.snippet.slice(0, 80).trim() : null));
+    const searchTerms = docHighlights
+      ? phrasesToWords(docHighlights)
+      : (doc.snippet ? phrasesToWords([doc.snippet]) : null);
+    console.log('[openDoc] name:', doc.name, 'hlKeys:', hl ? Object.keys(hl) : 'none', 'matched:', !!docHighlights, 'terms:', searchTerms);
+    setSearchQuery(searchTerms);
     setViewerDoc({
       id: doc.nodeId,
       name: doc.name,

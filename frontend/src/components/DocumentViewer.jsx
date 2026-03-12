@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { X, Download, FileText, Calendar, Layers, Shield, ExternalLink, User, ChevronDown, ChevronUp, Sparkles, Search } from 'lucide-react';
+import { X, Download, FileText, Shield, ExternalLink, ChevronDown, ChevronUp, Sparkles, Search } from 'lucide-react';
 import { classifyDocument, extractMetadata } from '../lib/copyright';
 import { getContentUrl } from '../lib/api';
 
@@ -339,52 +339,101 @@ export default function DocumentViewer({ document: doc, searchQuery, onClose, fi
       <div style={{
         background: 'var(--color-bg-elevated)',
         borderTop: '1px solid var(--color-border)',
+        boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.04)',
       }} className="shrink-0">
-        <div className="viewer-meta-bar flex items-center gap-5 text-[11px] text-text-secondary" style={{ padding: '10px 12px 10px 16px' }}>
-          <span className="flex items-center gap-1.5">
-            <User size={10} className="text-text-muted" />
-            {meta.author}
-          </span>
-          <span className="flex items-center gap-1.5">
-            <Calendar size={10} className="text-text-muted" />
-            {meta.date}
-          </span>
-          <span className="flex items-center gap-1.5">
-            <Layers size={10} className="text-text-muted" />
-            {pages} pg
-          </span>
-          <span className="text-text-muted">{size}</span>
-          <a
-            href={getContentUrl(doc.id, true)}
-            download={doc.name}
-            className="inline-flex items-center gap-1.5 px-3 py-1 bg-accent text-text-on-dark rounded-md text-[10px] font-semibold hover:bg-accent-hover transition-colors"
-          >
-            <Download size={11} />
-            Download
-          </a>
-          <button
-            onClick={() => setDetailsOpen(!detailsOpen)}
-            className="p-1 rounded text-text-muted hover:text-text-primary hover:bg-bg-elevated transition-colors"
-            title={detailsOpen ? 'Hide details' : 'Show details'}
-          >
-            {detailsOpen ? <ChevronDown size={13} /> : <ChevronUp size={13} />}
-          </button>
-          {isPdf && (
-            <button
-              onClick={() => setChatOpen(!chatOpen)}
-              title={chatOpen ? 'Close AI chat' : 'Chat with document'}
-              className="ml-auto shrink-0 inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-semibold transition-all"
+        <div className="viewer-meta-bar flex items-center text-[11px]" style={{ padding: '10px 12px 10px 16px', gap: 10 }}>
+          {/* Left: metadata with dot separators + classification pill */}
+          <div className="flex items-center gap-2 min-w-0 flex-1" style={{ color: 'var(--color-text-muted)' }}>
+            {[meta.author, meta.date, pages !== '—' ? `${pages} pg` : null, size !== '—' ? size : null]
+              .filter(v => v && v !== '—')
+              .map((item, i, arr) => (
+                <span key={i} className="flex items-center gap-2 whitespace-nowrap">
+                  {item}
+                  {i < arr.length - 1 && <span style={{ opacity: 0.4 }}>·</span>}
+                </span>
+              ))}
+            <span style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 5,
+              padding: '2px 8px',
+              borderRadius: 999,
+              fontSize: 10,
+              fontWeight: 600,
+              letterSpacing: '0.03em',
+              color: classification.color === 'green' ? '#4db8a4' : classification.color === 'amber' ? '#c8a44e' : classification.color === 'red' ? '#C75B5B' : '#6ba3e8',
+              background: classification.color === 'green' ? 'rgba(77,184,164,0.08)' : classification.color === 'amber' ? 'rgba(200,164,78,0.08)' : classification.color === 'red' ? 'rgba(199,91,91,0.08)' : 'rgba(107,163,232,0.08)',
+            }}>
+              <span style={{
+                width: 6, height: 6, borderRadius: '50%',
+                background: classification.color === 'green' ? '#4db8a4' : classification.color === 'amber' ? '#c8a44e' : classification.color === 'red' ? '#C75B5B' : '#6ba3e8',
+              }} />
+              {classification.label}
+            </span>
+          </div>
+
+          {/* Right: action buttons */}
+          <div className="flex items-center shrink-0" style={{ gap: 6 }}>
+            <a
+              href={getContentUrl(doc.id, true)}
+              download={doc.name}
+              className="inline-flex items-center gap-1.5 text-[11px] font-medium transition-colors"
               style={{
-                background: chatOpen ? 'rgba(200,164,78,0.15)' : 'rgba(255,255,255,0.04)',
-                color: chatOpen ? 'var(--color-accent-gold)' : 'var(--color-text-secondary)',
-                border: chatOpen ? '1px solid var(--color-border-gold)' : '1px solid rgba(255,255,255,0.07)',
+                padding: '5px 12px',
+                borderRadius: 8,
+                color: 'var(--color-text-secondary)',
+                border: '1px solid var(--color-border)',
+                background: 'transparent',
+                boxShadow: '0 1px 2px rgba(0,0,0,0.06)',
+                textDecoration: 'none',
               }}
             >
-              <Sparkles size={11} />
-              Ask AI
-              {chatOpen ? <ChevronDown size={10} /> : <ChevronUp size={10} />}
+              <Download size={12} />
+              Download
+            </a>
+            <button
+              onClick={() => setDetailsOpen(!detailsOpen)}
+              title={detailsOpen ? 'Hide details' : 'Show details'}
+              className="transition-colors"
+              style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                width: 30, height: 30, borderRadius: 8,
+                border: '1px solid var(--color-border)',
+                background: 'transparent',
+                color: 'var(--color-text-muted)',
+                boxShadow: '0 1px 2px rgba(0,0,0,0.06)',
+                cursor: 'pointer',
+              }}
+            >
+              {detailsOpen ? <ChevronDown size={14} /> : <ChevronUp size={14} />}
             </button>
-          )}
+            {isPdf && (
+              <>
+                <div style={{ width: 1, height: 20, background: 'var(--color-border)', margin: '0 4px' }} />
+                <button
+                  onClick={() => setChatOpen(!chatOpen)}
+                  title={chatOpen ? 'Close AI chat' : 'Chat with document'}
+                  className="ask-ai-btn shrink-0 inline-flex items-center gap-1.5 text-[11px] font-semibold transition-all"
+                  style={{
+                    padding: '6px 14px',
+                    borderRadius: 999,
+                    color: '#fff',
+                    background: chatOpen
+                      ? 'linear-gradient(135deg, #3d9485, #56BFA8)'
+                      : 'linear-gradient(135deg, #459e8c, #56BFA8)',
+                    border: 'none',
+                    boxShadow: '0 1px 4px rgba(86,191,168,0.3)',
+                    cursor: 'pointer',
+                    position: 'relative',
+                    overflow: 'hidden',
+                  }}
+                >
+                  <Sparkles size={12} />
+                  Ask AI
+                </button>
+              </>
+            )}
+          </div>
         </div>
 
         {detailsOpen && (

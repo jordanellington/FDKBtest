@@ -861,10 +861,12 @@ After your answer, you MUST output a <search_terms> block containing a JSON obje
 
     const response = await bedrockClient.send(command);
 
-    // Buffer full response to intercept <search_terms> block
-    let fullResponse = '';
-    let searchTermsStarted = false;
+    // Intercept <search_terms> block: stream visible text, hold back anything
+    // that might be the start of the marker, buffer everything after it.
     const MARKER = '<search_terms>';
+    let fullResponse = '';
+    let pending = '';        // text not yet sent (might be start of marker)
+    let capturing = false;   // true once we've found the marker
 
     for await (const event of response.body) {
       if (event.chunk) {
@@ -873,36 +875,41 @@ After your answer, you MUST output a <search_terms> block containing a JSON obje
           const text = parsed.delta.text;
           fullResponse += text;
 
-          if (!searchTermsStarted) {
-            const markerIdx = fullResponse.indexOf(MARKER);
-            if (markerIdx !== -1) {
-              searchTermsStarted = true;
-              // Send any text in this chunk before the marker
-              const beforeMarker = text.split(MARKER)[0];
-              if (beforeMarker) {
-                res.write(`data: ${JSON.stringify({ type: 'delta', text: beforeMarker })}\n\n`);
-              }
-            } else {
-              // Check if buffer ends with a partial '<search_terms>' prefix
-              let holdBack = 0;
-              for (let len = 1; len < MARKER.length; len++) {
-                if (fullResponse.endsWith(MARKER.slice(0, len))) {
-                  holdBack = len;
-                }
-              }
-              if (holdBack === 0) {
-                res.write(`data: ${JSON.stringify({ type: 'delta', text })}\n\n`);
-              } else {
-                const safe = text.slice(0, text.length - holdBack);
-                if (safe) {
-                  res.write(`data: ${JSON.stringify({ type: 'delta', text: safe })}\n\n`);
-                }
-              }
+          if (capturing) continue; // past marker, just buffer silently
+
+          pending += text;
+
+          // Check if pending contains the full marker
+          const markerIdx = pending.indexOf(MARKER);
+          if (markerIdx !== -1) {
+            const before = pending.slice(0, markerIdx);
+            if (before) {
+              res.write(`data: ${JSON.stringify({ type: 'delta', text: before })}\n\n`);
+            }
+            capturing = true;
+            continue;
+          }
+
+          // Find how much is safe to send (not a partial marker prefix)
+          let safeEnd = pending.length;
+          for (let len = Math.min(MARKER.length - 1, pending.length); len >= 1; len--) {
+            if (pending.endsWith(MARKER.slice(0, len))) {
+              safeEnd = pending.length - len;
+              break;
             }
           }
-          // If searchTermsStarted, buffer silently (don't send to client)
+
+          if (safeEnd > 0) {
+            res.write(`data: ${JSON.stringify({ type: 'delta', text: pending.slice(0, safeEnd) })}\n\n`);
+            pending = pending.slice(safeEnd);
+          }
         }
       }
+    }
+
+    // Flush any held-back text that turned out not to be the marker
+    if (!capturing && pending) {
+      res.write(`data: ${JSON.stringify({ type: 'delta', text: pending })}\n\n`);
     }
 
     // Parse <search_terms> block and send as highlights event
@@ -911,9 +918,12 @@ After your answer, you MUST output a <search_terms> block containing a JSON obje
       try {
         const highlights = JSON.parse(stMatch[1]);
         res.write(`data: ${JSON.stringify({ type: 'highlights', highlights })}\n\n`);
+        console.log('[fdkb-chat] Highlights sent for', Object.keys(highlights).length, 'documents');
       } catch (e) {
         console.warn('[fdkb-chat] Failed to parse search_terms JSON:', e.message);
       }
+    } else {
+      console.log('[fdkb-chat] No <search_terms> block found in response (' + fullResponse.length + ' chars)');
     }
 
     res.write(`data: ${JSON.stringify({ type: 'done' })}\n\n`);

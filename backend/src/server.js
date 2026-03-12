@@ -920,9 +920,20 @@ After your answer, you MUST output a <search_terms> block containing a JSON obje
     const stMatch = fullResponse.match(/<search_terms>\s*([\s\S]*?)\s*<\/search_terms>/);
     if (stMatch) {
       try {
-        const highlights = JSON.parse(stMatch[1]);
+        const rawHighlights = JSON.parse(stMatch[1]);
+        // Re-key highlights using actual source filenames so frontend lookup matches
+        const highlights = {};
+        for (const [modelKey, terms] of Object.entries(rawHighlights)) {
+          const mkLower = modelKey.replace(/\.PDF$/i, '').toLowerCase();
+          const source = sources.find(s => {
+            const sLower = s.name.replace(/\.PDF$/i, '').toLowerCase();
+            return s.name === modelKey || sLower === mkLower ||
+              s.displayTitle === modelKey || sLower.includes(mkLower) || mkLower.includes(sLower);
+          });
+          highlights[source ? source.name : modelKey] = terms;
+        }
         res.write(`data: ${JSON.stringify({ type: 'highlights', highlights })}\n\n`);
-        console.log('[fdkb-chat] Highlights sent for', Object.keys(highlights).length, 'documents');
+        console.log('[fdkb-chat] Highlights sent for', Object.keys(highlights).length, 'documents, keys:', Object.keys(highlights));
       } catch (e) {
         console.warn('[fdkb-chat] Failed to parse search_terms JSON:', e.message);
       }

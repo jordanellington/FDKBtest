@@ -26,6 +26,14 @@ function stripCitationBrackets(text) {
 // Match citations: "12.1.0003.PDF" with or without ", p.N"
 const CITE_TEXT_RE = /(\d[\d.]+\.PDF(?:,\s*p\.?\s*\d+)?)/gi;
 
+const citeLinkStyle = {
+  color: 'var(--color-accent)',
+  cursor: 'pointer',
+  textDecoration: 'underline',
+  textDecorationStyle: 'dotted',
+  textUnderlineOffset: 2,
+};
+
 function linkCitations(children, sources, onOpenDoc) {
   if (!children) return children;
   const arr = Array.isArray(children) ? children : [children];
@@ -49,13 +57,7 @@ function linkCitations(children, sources, onOpenDoc) {
           tabIndex={0}
           onClick={() => onOpenDoc(source)}
           onKeyDown={(e) => e.key === 'Enter' && onOpenDoc(source)}
-          style={{
-            color: 'var(--color-accent)',
-            cursor: 'pointer',
-            textDecoration: 'underline',
-            textDecorationStyle: 'dotted',
-            textUnderlineOffset: 2,
-          }}
+          style={citeLinkStyle}
           title={docName}
         >
           {source.displayTitle || docName}
@@ -714,6 +716,20 @@ function MessageBubble({ msg, onOpenDoc }) {
               p: ({ children }) => <p>{linkCitations(children, msg.sources, onOpenDoc)}</p>,
               li: ({ children }) => <li>{linkCitations(children, msg.sources, onOpenDoc)}</li>,
               td: ({ children }) => <td>{linkCitations(children, msg.sources, onOpenDoc)}</td>,
+              a: ({ children }) => {
+                const text = typeof children === 'string' ? children :
+                  Array.isArray(children) ? children.join('') : String(children || '');
+                const source = msg.sources?.find(s =>
+                  s.displayTitle === text || s.name === text ||
+                  s.displayTitle?.toLowerCase() === text.toLowerCase()
+                );
+                if (source) {
+                  return <span role="button" tabIndex={0} onClick={() => onOpenDoc(source)}
+                    onKeyDown={(e) => e.key === 'Enter' && onOpenDoc(source)}
+                    style={citeLinkStyle}>{source.displayTitle || source.name}</span>;
+                }
+                return <span>{children}</span>;
+              },
             }}>
               {stripCitationBrackets(msg.content)}
             </Markdown>

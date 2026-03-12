@@ -823,7 +823,8 @@ app.post('/api/chat/fdkb', requireAuth, async (req, res) => {
 Relevant sections from multiple documents have been retrieved based on the user's question. Base your answers on these sections.
 
 CITATION RULES:
-- Always cite your sources using the format [DocumentName] (e.g., [12.1.0003.PDF])
+- Always cite your sources using ONLY the exact filename from the [Source: ...] headers (e.g., [12.1.0003.PDF])
+- NEVER use article titles, display names, or descriptions as citations — ONLY the PDF filenames
 - Do NOT include page numbers in citations
 - When synthesizing across documents, cite each document that contributed to your answer
 - If retrieved sections don't contain enough information to fully answer, say so

@@ -3,7 +3,15 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { getStats, getChildren } from '../lib/api';
 import { Search, X, Loader2, MessageSquare } from 'lucide-react';
-import Counter from '../components/Counter';
+
+const SPECIAL_COLLECTIONS_META = {
+  '[In Box]': 'Incoming materials',
+  'All Ever Approved NDAs List': 'Restricted Access',
+  'Eli Lilly GMP Consent Decree Materials': null,
+  'FD Corporate Integrity Agreements': null,
+  'FD Court Documents': null,
+  'FD Docket Files': null,
+};
 
 function zeroPad(numStr) {
   const n = parseInt(numStr, 10);
@@ -68,43 +76,19 @@ export default function Dashboard() {
 
   return (
     <div>
-      {/* Title + Ticker Stats — padding: 44px 56px 0 */}
+      {/* Inline stats */}
       <motion.div
         initial={{ opacity: 0, y: 14 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.45 }}
         className="page-section-hero"
-        style={{ padding: '44px 56px 0' }}
+        style={{ padding: '28px 56px 0' }}
       >
-        <h1 className="page-title font-display text-[42px] font-light text-text-primary leading-[1.08] tracking-[-0.02em]"
-          style={{ marginBottom: 10 }}>
-          Food &amp; Drug Knowledge Base
-        </h1>
-        <p className="page-subtitle text-text-muted text-[14px]" style={{ marginBottom: 28 }}>
-          Selected practice materials, 1947 to present
+        <p style={{ fontSize: 13, color: 'var(--color-text-muted)', paddingBottom: 20, borderBottom: '1px solid var(--color-border)', margin: 0 }}>
+          <span style={{ color: 'var(--color-accent-bright)', fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>{totalDocs.toLocaleString()}</span> documents&nbsp;&nbsp;&middot;&nbsp;&nbsp;
+          <span style={{ color: 'var(--color-accent-bright)', fontWeight: 600 }}>{stats?.practiceAreas || numbered.length || 22}</span> subject areas&nbsp;&nbsp;&middot;&nbsp;&nbsp;
+          Coverage from <span style={{ color: 'var(--color-accent-bright)', fontWeight: 600 }}>1947</span> to present
         </p>
-
-        {/* Bloomberg-style ticker */}
-        <div className="stats-row flex flex-wrap items-baseline" style={{ gap: 48, paddingBottom: 28, borderBottom: '1px solid var(--color-border)' }}>
-          <div className="flex items-baseline" style={{ gap: 10 }}>
-            <span className="stats-number font-display text-[28px] font-light text-accent-bright leading-none">
-              <Counter target={totalDocs} />
-            </span>
-            <span className="text-[10px] font-semibold tracking-[0.1em] text-text-muted">DOCUMENTS</span>
-          </div>
-          <div className="flex items-baseline" style={{ gap: 10 }}>
-            <span className="stats-number font-display text-[28px] font-light text-accent-bright leading-none">
-              {stats?.practiceAreas || numbered.length || 22}
-            </span>
-            <span className="text-[10px] font-semibold tracking-[0.1em] text-text-muted">SUBJECT AREAS</span>
-          </div>
-          <div className="flex items-baseline" style={{ gap: 10 }}>
-            <span className="stats-number font-display text-[28px] font-light text-accent-bright leading-none">
-              {stats?.yearRange || '1947 – Present'}
-            </span>
-            <span className="text-[10px] font-semibold tracking-[0.1em] text-text-muted">COVERAGE</span>
-          </div>
-        </div>
       </motion.div>
 
       {/* Hero Search */}
@@ -337,7 +321,7 @@ export default function Dashboard() {
         </div>
       </motion.div>
 
-      {/* Special Collections — padding: 0 56px 80px */}
+      {/* Special Collections */}
       <motion.div
         initial={{ opacity: 0, y: 14 }}
         animate={{ opacity: 1, y: 0 }}
@@ -349,19 +333,40 @@ export default function Dashboard() {
           <h2 className="section-heading font-display text-[24px] font-normal text-text-primary">Special Collections</h2>
         </div>
 
-        <div className="collections-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0 32px' }}>
-          {special.map((f) => (
-            <div
-              key={f.id}
-              onClick={() => navigate(`/browse/${f.id}`)}
-              className="cursor-pointer"
-              style={{ padding: '10px 0', borderBottom: '1px solid var(--color-border)' }}
-            >
-              <span className="text-[13px] text-text-secondary hover:text-accent-bright transition-colors duration-150">
-                {f.name}
-              </span>
-            </div>
-          ))}
+        <div className="collections-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
+          {special.map((f) => {
+            const subtitle = SPECIAL_COLLECTIONS_META[f.name] || null;
+            return (
+              <div
+                key={f.id}
+                onClick={() => navigate(`/browse/${f.id}`)}
+                className="cursor-pointer transition-all duration-200"
+                style={{
+                  padding: '14px 18px',
+                  borderRadius: 8,
+                  border: '1px solid var(--color-border)',
+                  background: 'var(--color-bg-secondary)',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = 'var(--color-border-strong)';
+                  e.currentTarget.style.background = 'var(--color-bg-hover)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = 'var(--color-border)';
+                  e.currentTarget.style.background = 'var(--color-bg-secondary)';
+                }}
+              >
+                <span style={{ display: 'block', fontSize: 13, fontWeight: 500, color: 'var(--color-text-primary)', marginBottom: subtitle ? 3 : 0 }}>
+                  {f.name}
+                </span>
+                {subtitle && (
+                  <span style={{ display: 'block', fontSize: 11, color: 'var(--color-text-muted)', lineHeight: 1.4 }}>
+                    {subtitle}
+                  </span>
+                )}
+              </div>
+            );
+          })}
         </div>
       </motion.div>
     </div>

@@ -17,13 +17,14 @@ const MODELS = [
 function stripCitationBrackets(text) {
   return text
     .replace(/<search_terms>[\s\S]*?(<\/search_terms>|$)/gi, '')
-    .replace(/\[([^\]]+?\.PDF),\s*p\.?\s*(\d+)\]/gi, '$1, p.$2')
+    .replace(/\[([^\]]+?\.PDF)(?:,\s*p\.?\s*\d+)?\]/gi, '$1')
     .trimEnd();
 }
 
 // Process direct children of a React element: find citation patterns in strings,
 // replace with clickable spans. Passes non-string children through unchanged.
-const CITE_TEXT_RE = /(\d[\d.]+\.PDF,\s*p\.?\s*\d+)/gi;
+// Match citations: "12.1.0003.PDF" with or without ", p.N"
+const CITE_TEXT_RE = /(\d[\d.]+\.PDF(?:,\s*p\.?\s*\d+)?)/gi;
 
 function linkCitations(children, sources, onOpenDoc) {
   if (!children) return children;
@@ -34,7 +35,7 @@ function linkCitations(children, sources, onOpenDoc) {
     if (parts.length === 1) return child;
     return parts.map((part, i) => {
       if (i % 2 === 0) return part;
-      const m = part.match(/^(.+?\.PDF),\s*p\.?\s*\d+$/i);
+      const m = part.match(/^(.+?\.PDF)/i);
       if (!m) return part;
       const docName = m[1];
       const source = sources?.find(s =>
@@ -748,14 +749,12 @@ function SourceCard({ source, onClick }) {
     : source.name;
   const pub = source.publicationTitle;
   const date = formatDate(source.publicationDate);
-  const page = source.page;
   const distro = source.distroLevel;
 
   // Build metadata pieces
   const metaParts = [
     pub,
     date,
-    page ? `p. ${page}` : null,
   ].filter(Boolean);
 
   // Distro badge config

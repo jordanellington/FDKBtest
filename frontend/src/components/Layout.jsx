@@ -1,5 +1,5 @@
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import { useAuth } from '../hooks/useAuth';
 import { LogOut, Menu, X, Sun, Moon } from 'lucide-react';
@@ -13,12 +13,25 @@ export default function Layout() {
   const location = useLocation();
   const [chatOpen, setChatOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const settingsRef = useRef(null);
   const [theme, setTheme] = useState(() => getTheme());
 
   useEffect(() => {
     applyTheme(theme);
     saveTheme(theme);
   }, [theme]);
+
+  useEffect(() => {
+    if (!settingsOpen) return;
+    const handleClick = (e) => {
+      if (settingsRef.current && !settingsRef.current.contains(e.target)) {
+        setSettingsOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [settingsOpen]);
 
   const toggleTheme = () => setTheme(prev => prev === 'dark' ? 'light' : 'dark');
 
@@ -32,7 +45,7 @@ export default function Layout() {
     { to: '/chat', label: 'Chat with FDKB' },
   ];
 
-  const placeholderNav = ['People', 'Settings'];
+  const settingsItems = ['Site', 'Copyright Clearinghouse'];
 
   return (
     <div className="flex flex-col h-screen overflow-hidden bg-bg-primary">
@@ -61,20 +74,65 @@ export default function Layout() {
               {label}
             </NavLink>
           ))}
-          {placeholderNav.map(label => (
-            <span key={label}
+          <span
+            className="text-[14px]"
+            style={{
+              padding: '6px 16px',
+              borderRadius: 6,
+              fontWeight: 500,
+              color: 'var(--color-text-secondary)',
+              cursor: 'default',
+            }}
+          >
+            People
+          </span>
+          <div ref={settingsRef} style={{ position: 'relative' }}>
+            <span
               className="text-[14px]"
+              onClick={() => setSettingsOpen(!settingsOpen)}
               style={{
                 padding: '6px 16px',
                 borderRadius: 6,
                 fontWeight: 500,
                 color: 'var(--color-text-secondary)',
-                cursor: 'default',
+                cursor: 'pointer',
+                display: 'inline-block',
               }}
             >
-              {label}
+              Settings ▾
             </span>
-          ))}
+            {settingsOpen && (
+              <div
+                style={{
+                  position: 'absolute',
+                  top: '100%',
+                  left: 0,
+                  marginTop: 4,
+                  background: 'var(--color-bg-sidebar)',
+                  border: '1px solid var(--color-border)',
+                  borderRadius: 8,
+                  padding: '4px 0',
+                  minWidth: 200,
+                  zIndex: 100,
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                }}
+              >
+                {settingsItems.map(item => (
+                  <div
+                    key={item}
+                    className="text-[13px] hover:bg-bg-elevated transition-colors"
+                    style={{
+                      padding: '8px 16px',
+                      color: 'var(--color-text-secondary)',
+                      cursor: 'default',
+                    }}
+                  >
+                    {item}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </nav>
 
         {/* Spacer */}

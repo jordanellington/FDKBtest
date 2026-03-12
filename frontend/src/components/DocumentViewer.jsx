@@ -236,7 +236,6 @@ export default function DocumentViewer({ document: doc, searchQuery, onClose, fi
     ? (doc.content.sizeInBytes / 1024 / 1024).toFixed(2) + ' MB'
     : '—';
   const classification = classifyDocument(doc);
-  const meta = extractMetadata(doc);
 
   return (
     <motion.div

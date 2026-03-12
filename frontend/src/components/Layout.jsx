@@ -30,6 +30,8 @@ export default function Layout() {
   const mainNav = [
     { to: '/', label: 'Dashboard', end: true },
     { to: '/chat', label: 'Chat with FDKB' },
+    { to: '/people', label: 'People' },
+    { to: '/settings', label: 'Settings' },
   ];
 
   return (

@@ -37,10 +37,10 @@ function DistributionBadge({ classification }) {
   return (
     <span
       data-tooltip={classification.tooltip}
-      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium"
-      style={{ color: c.color, background: c.bg, border: `1px solid ${c.border}` }}
+      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full font-medium"
+      style={{ color: c.color, background: c.bg, border: `1px solid ${c.border}`, fontSize: 11 }}
     >
-      <Shield size={11} />
+      <Shield size={10} />
       {classification.label}
     </span>
   );

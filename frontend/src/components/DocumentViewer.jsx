@@ -128,12 +128,12 @@ function PdfViewer({ fileUrl, searchQuery, actionButtons }) {
                       <GoToPreviousPage>
                         {(p) => (
                           <button onClick={p.onClick} disabled={p.isDisabled}
-                            style={{ ...toolBtnStyle, padding: '0 12px', height: '100%', fontSize: 14, cursor: p.isDisabled ? 'default' : 'pointer', opacity: p.isDisabled ? 0.3 : 1 }}>
+                            style={{ ...toolBtnStyle, padding: '0 12px', height: '100%', fontSize: 18, cursor: p.isDisabled ? 'default' : 'pointer', opacity: p.isDisabled ? 0.3 : 1 }}>
                             ‹
                           </button>
                         )}
                       </GoToPreviousPage>
-                      <div className="flex items-center gap-1" style={{ color: 'var(--color-text-muted)', padding: '0 4px' }}>
+                      <div className="flex items-center justify-center gap-1" style={{ color: 'var(--color-text-muted)', padding: '0 4px', minWidth: 52 }}>
                         <CurrentPageInput />
                         <span style={{ opacity: 0.5 }}>/</span>
                         <NumberOfPages />
@@ -141,7 +141,7 @@ function PdfViewer({ fileUrl, searchQuery, actionButtons }) {
                       <GoToNextPage>
                         {(p) => (
                           <button onClick={p.onClick} disabled={p.isDisabled}
-                            style={{ ...toolBtnStyle, padding: '0 12px', height: '100%', fontSize: 14, cursor: p.isDisabled ? 'default' : 'pointer', opacity: p.isDisabled ? 0.3 : 1 }}>
+                            style={{ ...toolBtnStyle, padding: '0 12px', height: '100%', fontSize: 18, cursor: p.isDisabled ? 'default' : 'pointer', opacity: p.isDisabled ? 0.3 : 1 }}>
                             ›
                           </button>
                         )}

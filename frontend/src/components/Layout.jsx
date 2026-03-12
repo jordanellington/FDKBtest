@@ -30,9 +30,9 @@ export default function Layout() {
   const mainNav = [
     { to: '/', label: 'Dashboard', end: true },
     { to: '/chat', label: 'Chat with FDKB' },
-    { to: '/people', label: 'People' },
-    { to: '/settings', label: 'Settings' },
   ];
+
+  const placeholderNav = ['People', 'Settings'];
 
   return (
     <div className="flex flex-col h-screen overflow-hidden bg-bg-primary">
@@ -60,6 +60,20 @@ export default function Layout() {
             >
               {label}
             </NavLink>
+          ))}
+          {placeholderNav.map(label => (
+            <span key={label}
+              className="text-[14px]"
+              style={{
+                padding: '6px 16px',
+                borderRadius: 6,
+                fontWeight: 500,
+                color: 'var(--color-text-secondary)',
+                cursor: 'default',
+              }}
+            >
+              {label}
+            </span>
           ))}
         </nav>
 

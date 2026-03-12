@@ -122,18 +122,18 @@ function PdfViewer({ fileUrl, searchQuery, actionButtons }) {
                         borderRadius: 7,
                         padding: '3px 5px',
                         gap: 1,
-                        height: 30,
+                        height: 34,
                       }}
                     >
                       <GoToPreviousPage>
                         {(p) => (
                           <button onClick={p.onClick} disabled={p.isDisabled}
-                            style={{ ...toolBtnStyle, cursor: p.isDisabled ? 'default' : 'pointer', opacity: p.isDisabled ? 0.3 : 1 }}>
+                            style={{ ...toolBtnStyle, padding: '0 12px', height: '100%', fontSize: 14, cursor: p.isDisabled ? 'default' : 'pointer', opacity: p.isDisabled ? 0.3 : 1 }}>
                             ‹
                           </button>
                         )}
                       </GoToPreviousPage>
-                      <div className="flex items-center gap-1" style={{ color: 'var(--color-text-muted)' }}>
+                      <div className="flex items-center gap-1" style={{ color: 'var(--color-text-muted)', padding: '0 4px' }}>
                         <CurrentPageInput />
                         <span style={{ opacity: 0.5 }}>/</span>
                         <NumberOfPages />
@@ -141,7 +141,7 @@ function PdfViewer({ fileUrl, searchQuery, actionButtons }) {
                       <GoToNextPage>
                         {(p) => (
                           <button onClick={p.onClick} disabled={p.isDisabled}
-                            style={{ ...toolBtnStyle, cursor: p.isDisabled ? 'default' : 'pointer', opacity: p.isDisabled ? 0.3 : 1 }}>
+                            style={{ ...toolBtnStyle, padding: '0 12px', height: '100%', fontSize: 14, cursor: p.isDisabled ? 'default' : 'pointer', opacity: p.isDisabled ? 0.3 : 1 }}>
                             ›
                           </button>
                         )}
@@ -157,17 +157,17 @@ function PdfViewer({ fileUrl, searchQuery, actionButtons }) {
                         borderRadius: 7,
                         padding: '3px 5px',
                         gap: 1,
-                        height: 30,
+                        height: 34,
                       }}
                     >
                       <ZoomOut>
-                        {(p) => <button onClick={p.onClick} style={{ ...toolBtnStyle, fontSize: 13 }}>−</button>}
+                        {(p) => <button onClick={p.onClick} style={{ ...toolBtnStyle, padding: '0 12px', height: '100%', fontSize: 15 }}>−</button>}
                       </ZoomOut>
                       <Zoom>
-                        {(p) => <span style={{ color: 'var(--color-text-muted)', fontSize: 10, minWidth: 32, textAlign: 'center' }}>{Math.round(p.scale * 100)}%</span>}
+                        {(p) => <span style={{ color: 'var(--color-text-muted)', fontSize: 10, minWidth: 36, textAlign: 'center', padding: '0 2px' }}>{Math.round(p.scale * 100)}%</span>}
                       </Zoom>
                       <ZoomIn>
-                        {(p) => <button onClick={p.onClick} style={{ ...toolBtnStyle, fontSize: 13 }}>+</button>}
+                        {(p) => <button onClick={p.onClick} style={{ ...toolBtnStyle, padding: '0 12px', height: '100%', fontSize: 15 }}>+</button>}
                       </ZoomIn>
                     </div>
 

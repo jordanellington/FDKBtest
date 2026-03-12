@@ -58,6 +58,7 @@ export default function PortalNav({ user, onSearchClick }) {
                 onMouseLeave={() => setHovered(null)}
                 style={{
                   fontSize: 14,
+                  fontWeight: 500,
                   color: isActive || isHovered ? '#fff' : 'rgba(255,255,255,0.5)',
                   padding: '6px 11px',
                   borderRadius: 4,

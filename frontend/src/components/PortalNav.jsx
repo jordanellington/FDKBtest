@@ -13,7 +13,7 @@ export default function PortalNav({ user, onSearchClick }) {
   return (
     <div
       style={{
-        background: '#162f28',
+        background: '#0F4859',
         height: 46,
         position: 'sticky',
         top: 0,
@@ -29,7 +29,7 @@ export default function PortalNav({ user, onSearchClick }) {
         {/* Brand */}
         <a
           href="https://portal.covi3.com"
-          style={{ fontSize: 15, color: '#fff', display: 'flex', alignItems: 'baseline', textDecoration: 'none', cursor: 'pointer' }}
+          style={{ fontSize: 20, color: '#fff', display: 'flex', alignItems: 'baseline', textDecoration: 'none', cursor: 'pointer' }}
         >
           <span style={{ fontWeight: 400 }}>Cov</span>
           <span
@@ -42,7 +42,7 @@ export default function PortalNav({ user, onSearchClick }) {
           >
             Interactive
           </span>
-          <sup style={{ fontSize: 9, opacity: 0.4 }}>5</sup>
+          <sup style={{ fontSize: 11, opacity: 0.4 }}>5</sup>
         </a>
 
         {/* Nav */}
@@ -57,7 +57,7 @@ export default function PortalNav({ user, onSearchClick }) {
                 onMouseEnter={() => setHovered(app.label)}
                 onMouseLeave={() => setHovered(null)}
                 style={{
-                  fontSize: 12.5,
+                  fontSize: 14,
                   color: isActive || isHovered ? '#fff' : 'rgba(255,255,255,0.5)',
                   padding: '6px 11px',
                   borderRadius: 4,
@@ -86,7 +86,7 @@ export default function PortalNav({ user, onSearchClick }) {
               borderRadius: 4,
               padding: '5px 12px',
               color: 'rgba(255,255,255,0.4)',
-              fontSize: 12,
+              fontSize: 13,
               minWidth: 210,
               display: 'flex',
               alignItems: 'center',
@@ -94,7 +94,7 @@ export default function PortalNav({ user, onSearchClick }) {
               cursor: 'pointer',
             }}
           >
-            <Search size={13} strokeWidth={2} />
+            <Search size={14} strokeWidth={2} />
             <span style={{ flex: 1 }}>Search files, people, sites</span>
             <kbd
               style={{

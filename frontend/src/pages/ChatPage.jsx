@@ -120,7 +120,14 @@ export default function ChatPage() {
   const openDoc = (doc) => {
     // Look up AI-generated highlight terms for this document from the latest assistant message
     const lastAssistant = [...messages].reverse().find(m => m.role === 'assistant' && m.highlights);
-    const docHighlights = lastAssistant?.highlights?.[doc.name] || null;
+    const hl = lastAssistant?.highlights;
+    // Try exact match first, then case-insensitive match on keys
+    let docHighlights = hl?.[doc.name] || null;
+    if (!docHighlights && hl) {
+      const key = Object.keys(hl).find(k => k.toLowerCase() === doc.name?.toLowerCase());
+      if (key) docHighlights = hl[key];
+    }
+    console.log('[openDoc] name:', doc.name, 'highlights:', docHighlights, 'allKeys:', hl ? Object.keys(hl) : 'none');
     setSearchQuery(docHighlights || (doc.snippet ? doc.snippet.slice(0, 80).trim() : null));
     setViewerDoc({
       id: doc.nodeId,
@@ -199,6 +206,7 @@ export default function ChatPage() {
         });
       },
       onHighlights: (highlights) => {
+        console.log('[onHighlights] received:', highlights);
         setMessages(prev => {
           const updated = [...prev];
           updated[updated.length - 1] = { ...updated[updated.length - 1], highlights };

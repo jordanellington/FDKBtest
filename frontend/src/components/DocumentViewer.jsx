@@ -107,52 +107,73 @@ function PdfViewer({ fileUrl, searchQuery, actionButtons }) {
             {(props) => {
               const { CurrentPageInput, GoToNextPage, GoToPreviousPage, NumberOfPages, ZoomIn, ZoomOut, Zoom } = props;
               return (
-                <div className="flex items-center justify-between" style={{ padding: '6px 12px', fontSize: 12 }}>
-                  {/* Left: page nav + zoom + search */}
-                  <div className="flex items-center" style={{ gap: 2 }}>
-                    <GoToPreviousPage>
-                      {(p) => (
-                        <button onClick={p.onClick} disabled={p.isDisabled}
-                          style={{ ...toolBtnStyle, cursor: p.isDisabled ? 'default' : 'pointer', opacity: p.isDisabled ? 0.3 : 1 }}>
-                          ‹
-                        </button>
-                      )}
-                    </GoToPreviousPage>
-                    <div className="flex items-center gap-1" style={{ color: 'var(--color-text-muted)' }}>
-                      <CurrentPageInput />
-                      <span style={{ opacity: 0.5 }}>/</span>
-                      <NumberOfPages />
+                <div className="flex items-center justify-between" style={{ padding: '8px 16px', fontSize: 12 }}>
+                  {/* Left: page nav + zoom + search in rounded capsule */}
+                  <div className="flex items-center" style={{ gap: 4 }}>
+                    {/* Page nav group */}
+                    <div
+                      className="flex items-center"
+                      style={{
+                        background: 'var(--color-bg-secondary)',
+                        border: '1px solid var(--color-border)',
+                        borderRadius: 8,
+                        padding: '3px 4px',
+                        gap: 1,
+                      }}
+                    >
+                      <GoToPreviousPage>
+                        {(p) => (
+                          <button onClick={p.onClick} disabled={p.isDisabled}
+                            style={{ ...toolBtnStyle, cursor: p.isDisabled ? 'default' : 'pointer', opacity: p.isDisabled ? 0.3 : 1 }}>
+                            ‹
+                          </button>
+                        )}
+                      </GoToPreviousPage>
+                      <div className="flex items-center gap-1" style={{ color: 'var(--color-text-muted)' }}>
+                        <CurrentPageInput />
+                        <span style={{ opacity: 0.5 }}>/</span>
+                        <NumberOfPages />
+                      </div>
+                      <GoToNextPage>
+                        {(p) => (
+                          <button onClick={p.onClick} disabled={p.isDisabled}
+                            style={{ ...toolBtnStyle, cursor: p.isDisabled ? 'default' : 'pointer', opacity: p.isDisabled ? 0.3 : 1 }}>
+                            ›
+                          </button>
+                        )}
+                      </GoToNextPage>
                     </div>
-                    <GoToNextPage>
-                      {(p) => (
-                        <button onClick={p.onClick} disabled={p.isDisabled}
-                          style={{ ...toolBtnStyle, cursor: p.isDisabled ? 'default' : 'pointer', opacity: p.isDisabled ? 0.3 : 1 }}>
-                          ›
-                        </button>
-                      )}
-                    </GoToNextPage>
 
-                    <div style={{ width: 1, height: 16, background: 'var(--color-border)', margin: '0 6px' }} />
+                    {/* Zoom group */}
+                    <div
+                      className="flex items-center"
+                      style={{
+                        background: 'var(--color-bg-secondary)',
+                        border: '1px solid var(--color-border)',
+                        borderRadius: 8,
+                        padding: '3px 4px',
+                        gap: 1,
+                      }}
+                    >
+                      <ZoomOut>
+                        {(p) => <button onClick={p.onClick} style={{ ...toolBtnStyle, fontSize: 14, padding: '4px 6px' }}>−</button>}
+                      </ZoomOut>
+                      <Zoom>
+                        {(p) => <span style={{ color: 'var(--color-text-muted)', fontSize: 11, minWidth: 36, textAlign: 'center' }}>{Math.round(p.scale * 100)}%</span>}
+                      </Zoom>
+                      <ZoomIn>
+                        {(p) => <button onClick={p.onClick} style={{ ...toolBtnStyle, fontSize: 14, padding: '4px 6px' }}>+</button>}
+                      </ZoomIn>
+                    </div>
 
-                    <ZoomOut>
-                      {(p) => <button onClick={p.onClick} style={{ ...toolBtnStyle, fontSize: 14, padding: '4px 6px' }}>−</button>}
-                    </ZoomOut>
-                    <Zoom>
-                      {(p) => <span style={{ color: 'var(--color-text-muted)', fontSize: 11, minWidth: 36, textAlign: 'center' }}>{Math.round(p.scale * 100)}%</span>}
-                    </Zoom>
-                    <ZoomIn>
-                      {(p) => <button onClick={p.onClick} style={{ ...toolBtnStyle, fontSize: 14, padding: '4px 6px' }}>+</button>}
-                    </ZoomIn>
-
-                    <div style={{ width: 1, height: 16, background: 'var(--color-border)', margin: '0 6px' }} />
-
+                    {/* Search button */}
                     <ShowSearchPopover>
-                      {(p) => <button onClick={p.onClick} style={toolBtnStyle}><Search size={13} /></button>}
+                      {(p) => <button onClick={p.onClick} style={{ ...toolBtnStyle, padding: '5px 8px' }}><Search size={14} /></button>}
                     </ShowSearchPopover>
                   </div>
 
                   {/* Right: action buttons */}
-                  <div className="flex items-center" style={{ gap: 8 }}>
+                  <div className="flex items-center" style={{ gap: 10 }}>
                     {actionButtons}
                   </div>
                 </div>
@@ -249,42 +270,42 @@ export default function DocumentViewer({ document: doc, searchQuery, onClose, fi
                 <a
                   href={getContentUrl(doc.id, true)}
                   download={doc.name}
-                  className="inline-flex items-center gap-1.5 text-[12px] font-medium transition-colors"
+                  className="inline-flex items-center gap-1.5 text-[13px] font-medium transition-colors"
                   style={{
-                    padding: '7px 16px', borderRadius: 8, color: 'var(--color-text-secondary)',
+                    padding: '8px 18px', borderRadius: 999, color: 'var(--color-text-secondary)',
                     border: '1px solid var(--color-border)', background: 'transparent',
                     boxShadow: '0 1px 2px rgba(0,0,0,0.06)', textDecoration: 'none',
                   }}
                 >
-                  <Download size={13} />
+                  <Download size={14} />
                   Download
                 </a>
                 <button
                   onClick={() => {}}
                   title="Email this document"
-                  className="inline-flex items-center gap-1.5 text-[12px] font-medium transition-colors"
+                  className="inline-flex items-center gap-1.5 text-[13px] font-medium transition-colors"
                   style={{
-                    padding: '7px 16px', borderRadius: 8, color: 'var(--color-text-secondary)',
+                    padding: '8px 18px', borderRadius: 999, color: 'var(--color-text-secondary)',
                     border: '1px solid var(--color-border)', background: 'transparent',
                     boxShadow: '0 1px 2px rgba(0,0,0,0.06)', cursor: 'pointer',
                   }}
                 >
-                  <Mail size={13} />
+                  <Mail size={14} />
                   Email Me
                 </button>
                 {!chatOpen && (
                   <button
                     onClick={() => setChatOpen(true)}
                     title="Chat with document"
-                    className="ask-ai-btn shrink-0 inline-flex items-center gap-1.5 text-[12px] font-semibold transition-all"
+                    className="ask-ai-btn shrink-0 inline-flex items-center gap-1.5 text-[13px] font-semibold transition-all"
                     style={{
-                      padding: '7px 16px', borderRadius: 999, color: '#fff',
+                      padding: '8px 18px', borderRadius: 999, color: '#fff',
                       background: 'linear-gradient(135deg, #459e8c, #56BFA8)',
                       border: 'none', boxShadow: '0 1px 4px rgba(86,191,168,0.3)',
                       cursor: 'pointer', position: 'relative', overflow: 'hidden',
                     }}
                   >
-                    <Sparkles size={13} />
+                    <Sparkles size={14} />
                     Ask AI
                   </button>
                 )}

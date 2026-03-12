@@ -81,7 +81,7 @@ function PdfViewer({ fileUrl, searchQuery, actionButtons }) {
 
   const toolBtnStyle = {
     background: 'none', border: 'none', cursor: 'pointer',
-    color: 'var(--color-text-muted)', padding: '5px 8px', borderRadius: 4,
+    color: 'var(--color-text-secondary)', padding: '5px 8px', borderRadius: 4,
     display: 'flex', alignItems: 'center',
   };
 
@@ -122,7 +122,7 @@ function PdfViewer({ fileUrl, searchQuery, actionButtons }) {
                         borderRadius: 7,
                         padding: '3px 5px',
                         gap: 1,
-                        height: 34,
+                        height: 30,
                       }}
                     >
                       <GoToPreviousPage>
@@ -157,7 +157,7 @@ function PdfViewer({ fileUrl, searchQuery, actionButtons }) {
                         borderRadius: 7,
                         padding: '3px 5px',
                         gap: 1,
-                        height: 34,
+                        height: 30,
                       }}
                     >
                       <ZoomOut>

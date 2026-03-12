@@ -31,7 +31,9 @@ const CITATION_PATTERN = /(?:§\s*\d+[\d.]*|\d+\s*CFR\s*[\d.]+|\d+\s*U\.S\.C\.\s
  */
 export function chunkDocument(text) {
   const chunks = [];
-  const pages = text.split(/\n--- Page \d+ ---\n/).filter(Boolean);
+  // pymupdf4llm with page_separators=True outputs: "--- end of page=N ---"
+  // Also support legacy format: "--- Page N ---"
+  const pages = text.split(/\n+---\s*(?:end of page=|Page )\d+\s*---\n+/).filter(Boolean);
 
   let currentChunk = '';
   let currentHeader = '';

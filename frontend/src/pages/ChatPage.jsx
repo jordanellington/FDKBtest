@@ -127,8 +127,24 @@ export default function ChatPage() {
       const key = Object.keys(hl).find(k => k.toLowerCase() === doc.name?.toLowerCase());
       if (key) docHighlights = hl[key];
     }
-    console.log('[openDoc] name:', doc.name, 'highlights:', docHighlights, 'allKeys:', hl ? Object.keys(hl) : 'none');
-    setSearchQuery(docHighlights || (doc.snippet ? doc.snippet.slice(0, 80).trim() : null));
+    // Split phrases into individual words for resilient partial matching
+    // Filter out short/common words that would create noise
+    const STOPWORDS = new Set(['the', 'and', 'for', 'that', 'this', 'with', 'from', 'are', 'was', 'were', 'has', 'had', 'have', 'been', 'not', 'but', 'its', 'also', 'which', 'their', 'than', 'into', 'such', 'may', 'can', 'will', 'would', 'could', 'should', 'shall']);
+    let searchTerms = null;
+    if (docHighlights) {
+      const words = new Set();
+      for (const phrase of docHighlights) {
+        for (const word of phrase.split(/\s+/)) {
+          const clean = word.replace(/[^a-zA-Z0-9'-]/g, '');
+          if (clean.length >= 4 && !STOPWORDS.has(clean.toLowerCase())) {
+            words.add(clean);
+          }
+        }
+      }
+      searchTerms = words.size > 0 ? [...words] : null;
+    }
+    console.log('[openDoc] name:', doc.name, 'highlights:', docHighlights, 'searchTerms:', searchTerms);
+    setSearchQuery(searchTerms || (doc.snippet ? doc.snippet.slice(0, 80).trim() : null));
     setViewerDoc({
       id: doc.nodeId,
       name: doc.name,

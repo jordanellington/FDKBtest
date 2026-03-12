@@ -90,6 +90,7 @@ export default function ChatPage() {
   const inputRef = useRef(null);
   const userScrolledUp = useRef(false);
   const abortRef = useRef(null);
+  const highlightsRef = useRef({});
 
   useEffect(() => {
     localStorage.setItem('fdkb_chat_model', model);
@@ -118,12 +119,11 @@ export default function ChatPage() {
   const [searchQuery, setSearchQuery] = useState(null);
 
   const openDoc = (doc) => {
-    // Look up AI-generated highlight terms for this document from the latest assistant message
-    const lastAssistant = [...messages].reverse().find(m => m.role === 'assistant' && m.highlights);
-    const hl = lastAssistant?.highlights;
-    // Try exact match first, then case-insensitive match on keys
+    // Use ref for highlights — always has latest value regardless of React render cycle
+    const hl = highlightsRef.current;
     let docHighlights = hl?.[doc.name] || null;
     if (!docHighlights && hl) {
+      // Case-insensitive fallback
       const key = Object.keys(hl).find(k => k.toLowerCase() === doc.name?.toLowerCase());
       if (key) docHighlights = hl[key];
     }
@@ -149,6 +149,7 @@ export default function ChatPage() {
 
   const sendMessage = async (text) => {
     if (!text.trim() || streaming) return;
+    highlightsRef.current = {};
 
     const controller = new AbortController();
     abortRef.current = controller;
@@ -207,11 +208,7 @@ export default function ChatPage() {
       },
       onHighlights: (highlights) => {
         console.log('[onHighlights] received:', highlights);
-        setMessages(prev => {
-          const updated = [...prev];
-          updated[updated.length - 1] = { ...updated[updated.length - 1], highlights };
-          return updated;
-        });
+        highlightsRef.current = highlights;
       },
     });
   };

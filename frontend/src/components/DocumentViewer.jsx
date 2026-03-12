@@ -221,6 +221,12 @@ export default function DocumentViewer({ document: doc, searchQuery, onClose, fi
 
   if (!doc) return null;
 
+  // Extract CCC metadata — use pre-set fields (from chat sources) or derive from Alfresco properties
+  const meta = extractMetadata(doc);
+  const displayTitle = doc.displayTitle || meta.displayTitle || null;
+  const pubTitle = doc.publicationTitle || meta.publicationTitle || null;
+  const pubDate = doc.publicationDate || meta.publicationDate || null;
+
   const contentUrl = getContentUrl(doc.id);
   const isPdf = doc?.name?.toLowerCase().endsWith('.pdf');
 
@@ -267,11 +273,11 @@ export default function DocumentViewer({ document: doc, searchQuery, onClose, fi
           <FileText size={15} style={{ color: 'var(--color-accent)', marginTop: 2 }} className="shrink-0 self-start" strokeWidth={1.5} />
           <div className="min-w-0">
             <h2 className="text-[14px] font-semibold truncate" style={{ fontFamily: 'var(--font-display)' }}>
-              {doc.displayTitle && doc.displayTitle !== doc.name ? doc.displayTitle : doc.name}
+              {displayTitle && displayTitle !== doc.name ? displayTitle : doc.name}
             </h2>
-            {(doc.publicationTitle || doc.publicationDate) && (
+            {(pubTitle || pubDate) && (
               <p className="text-[11px] truncate" style={{ color: 'var(--color-text-muted)', marginTop: 1 }}>
-                {[doc.publicationTitle, doc.publicationDate ? formatDateStr(doc.publicationDate) : null].filter(Boolean).join(' · ')}
+                {[pubTitle, pubDate ? formatDateStr(pubDate) : null].filter(Boolean).join(' · ')}
               </p>
             )}
           </div>

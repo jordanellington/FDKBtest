@@ -40,9 +40,6 @@ export default function Layout() {
       <header className="flex items-center bg-bg-sidebar border-b border-border shrink-0" style={{ padding: '14px 24px' }}>
         {/* Left: brand */}
         <div style={{ flexShrink: 0 }}>
-          <p className="text-[9px] font-bold tracking-[0.32em] uppercase text-text-muted" style={{ marginBottom: 1 }}>
-            Covington
-          </p>
           <h1 className="font-display text-[20px] font-light text-text-primary leading-none tracking-[-0.01em]">Food & Drug Knowledge Base</h1>
         </div>
 

@@ -13,8 +13,12 @@ const MODELS = [
 ];
 
 // Strip brackets from citations so markdown renders them as plain text.
+// Also strip any leaked <search_terms> block from displayed content.
 function stripCitationBrackets(text) {
-  return text.replace(/\[([^\]]+?\.PDF),\s*p\.?\s*(\d+)\]/gi, '$1, p.$2');
+  return text
+    .replace(/<search_terms>[\s\S]*?(<\/search_terms>|$)/gi, '')
+    .replace(/\[([^\]]+?\.PDF),\s*p\.?\s*(\d+)\]/gi, '$1, p.$2')
+    .trimEnd();
 }
 
 // Process direct children of a React element: find citation patterns in strings,
@@ -114,9 +118,10 @@ export default function ChatPage() {
   const [searchQuery, setSearchQuery] = useState(null);
 
   const openDoc = (doc) => {
-    // Use first ~80 chars of snippet for text highlighting in the PDF viewer
-    const snippet = doc.snippet || null;
-    setSearchQuery(snippet ? snippet.slice(0, 80).trim() : null);
+    // Look up AI-generated highlight terms for this document from the latest assistant message
+    const lastAssistant = [...messages].reverse().find(m => m.role === 'assistant' && m.highlights);
+    const docHighlights = lastAssistant?.highlights?.[doc.name] || null;
+    setSearchQuery(docHighlights || (doc.snippet ? doc.snippet.slice(0, 80).trim() : null));
     setViewerDoc({
       id: doc.nodeId,
       name: doc.name,
@@ -190,6 +195,13 @@ export default function ChatPage() {
         setMessages(prev => {
           const updated = [...prev];
           updated[updated.length - 1] = { ...updated[updated.length - 1], sources: documents };
+          return updated;
+        });
+      },
+      onHighlights: (highlights) => {
+        setMessages(prev => {
+          const updated = [...prev];
+          updated[updated.length - 1] = { ...updated[updated.length - 1], highlights };
           return updated;
         });
       },

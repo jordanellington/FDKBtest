@@ -294,7 +294,7 @@ export async function chatStream(messages, doc, onDelta, onDone, onError, onStat
   }
 }
 
-export async function chatFdkbStream(messages, { onDelta, onDone, onError, onStatus, onSources, model, folderNodeId, signal }) {
+export async function chatFdkbStream(messages, { onDelta, onDone, onError, onStatus, onSources, onHighlights, model, folderNodeId, signal }) {
   const body = { messages, model };
   if (folderNodeId) body.folderNodeId = folderNodeId;
   const resp = await fetch(`${API_URL}/api/chat/fdkb`, {
@@ -340,6 +340,7 @@ export async function chatFdkbStream(messages, { onDelta, onDone, onError, onSta
             else if (data.type === 'error') onError(data.message);
             else if (data.type === 'status' && onStatus) onStatus(data.message);
             else if (data.type === 'sources' && onSources) onSources(data.documents);
+            else if (data.type === 'highlights' && onHighlights) onHighlights(data.highlights);
           } catch {}
         }
       }

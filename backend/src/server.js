@@ -826,7 +826,16 @@ CITATION RULES:
 - Always cite your sources using the format [DocumentName, p.N] (e.g., [12.1.0003.PDF, p.2])
 - When synthesizing across documents, cite each document that contributed to your answer
 - If retrieved sections don't contain enough information to fully answer, say so
-- Do not fabricate content not present in the provided sections`;
+- Do not fabricate content not present in the provided sections
+
+SEARCH TERMS (REQUIRED):
+After your answer, you MUST output a <search_terms> block containing a JSON object that maps each cited document filename to an array of 3-5 specific phrases or key terms that appear verbatim in that document and are most relevant to the answer. These will be used to highlight relevant passages when the user opens the document.
+- Use phrases that actually appear in the source text (2-6 words each)
+- Pick the most informative, specific phrases — not generic words
+- Format exactly like this (no other text inside the tags):
+<search_terms>
+{"12.1.0003.PDF": ["statutory ban on cloning", "Federal Embryo Protection Act", "five years imprisonment"], "12.1.0009.PDF": ["banned creation of embryos", "research purposes"]}
+</search_terms>`;
 
     const bedrockMessages = [
       ...messages.slice(0, -1).map(m => ({ role: m.role, content: m.content })),
@@ -852,12 +861,58 @@ CITATION RULES:
 
     const response = await bedrockClient.send(command);
 
+    // Buffer full response to intercept <search_terms> block
+    let fullResponse = '';
+    let searchTermsStarted = false;
+    const MARKER = '<search_terms>';
+
     for await (const event of response.body) {
       if (event.chunk) {
         const parsed = JSON.parse(new TextDecoder().decode(event.chunk.bytes));
         if (parsed.type === 'content_block_delta' && parsed.delta?.type === 'text_delta') {
-          res.write(`data: ${JSON.stringify({ type: 'delta', text: parsed.delta.text })}\n\n`);
+          const text = parsed.delta.text;
+          fullResponse += text;
+
+          if (!searchTermsStarted) {
+            const markerIdx = fullResponse.indexOf(MARKER);
+            if (markerIdx !== -1) {
+              searchTermsStarted = true;
+              // Send any text in this chunk before the marker
+              const beforeMarker = text.split(MARKER)[0];
+              if (beforeMarker) {
+                res.write(`data: ${JSON.stringify({ type: 'delta', text: beforeMarker })}\n\n`);
+              }
+            } else {
+              // Check if buffer ends with a partial '<search_terms>' prefix
+              let holdBack = 0;
+              for (let len = 1; len < MARKER.length; len++) {
+                if (fullResponse.endsWith(MARKER.slice(0, len))) {
+                  holdBack = len;
+                }
+              }
+              if (holdBack === 0) {
+                res.write(`data: ${JSON.stringify({ type: 'delta', text })}\n\n`);
+              } else {
+                const safe = text.slice(0, text.length - holdBack);
+                if (safe) {
+                  res.write(`data: ${JSON.stringify({ type: 'delta', text: safe })}\n\n`);
+                }
+              }
+            }
+          }
+          // If searchTermsStarted, buffer silently (don't send to client)
         }
+      }
+    }
+
+    // Parse <search_terms> block and send as highlights event
+    const stMatch = fullResponse.match(/<search_terms>\s*([\s\S]*?)\s*<\/search_terms>/);
+    if (stMatch) {
+      try {
+        const highlights = JSON.parse(stMatch[1]);
+        res.write(`data: ${JSON.stringify({ type: 'highlights', highlights })}\n\n`);
+      } catch (e) {
+        console.warn('[fdkb-chat] Failed to parse search_terms JSON:', e.message);
       }
     }
 

@@ -40,8 +40,10 @@ function DistributionBadge({ classification }) {
 }
 
 function PdfViewer({ fileUrl, searchQuery }) {
+  // searchQuery can be a string (legacy) or array of strings (AI highlight terms)
+  const firstKeyword = Array.isArray(searchQuery) ? searchQuery[0] : searchQuery;
   const toolbarPluginInstance = toolbarPlugin();
-  const searchPluginInstance = searchPlugin(searchQuery ? { keyword: searchQuery } : undefined);
+  const searchPluginInstance = searchPlugin(firstKeyword ? { keyword: firstKeyword } : undefined);
   const { Toolbar } = toolbarPluginInstance;
   const { ShowSearchPopover } = searchPluginInstance;
 
@@ -55,9 +57,11 @@ function PdfViewer({ fileUrl, searchQuery }) {
 
   useEffect(() => {
     if (!searchQuery || highlightDone.current) return;
+    const terms = Array.isArray(searchQuery) ? searchQuery : [searchQuery];
     const timer = setTimeout(() => {
       highlightDone.current = true;
-      searchPluginRef.current.highlight(searchQuery).then((matches) => {
+      // highlight() accepts SingleKeyword[] — highlight all terms at once
+      searchPluginRef.current.highlight(terms).then((matches) => {
         if (matches.length > 0) {
           searchPluginRef.current.jumpToMatch(1);
         }

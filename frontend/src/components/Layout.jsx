@@ -84,7 +84,7 @@ export default function Layout() {
               cursor: 'default',
             }}
           >
-            People
+            Site Members
           </span>
           <div ref={settingsRef} style={{ position: 'relative' }}>
             <span

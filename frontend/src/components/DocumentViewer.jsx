@@ -246,48 +246,48 @@ export default function DocumentViewer({ document: doc, searchQuery, onClose, fi
           {isPdf ? (
             <PdfViewer fileUrl={contentUrl} searchQuery={searchQuery} actionButtons={
               <>
+                <a
+                  href={getContentUrl(doc.id, true)}
+                  download={doc.name}
+                  className="inline-flex items-center gap-1.5 text-[12px] font-medium transition-colors"
+                  style={{
+                    padding: '7px 16px', borderRadius: 8, color: 'var(--color-text-secondary)',
+                    border: '1px solid var(--color-border)', background: 'transparent',
+                    boxShadow: '0 1px 2px rgba(0,0,0,0.06)', textDecoration: 'none',
+                  }}
+                >
+                  <Download size={13} />
+                  Download
+                </a>
+                <button
+                  onClick={() => {}}
+                  title="Email this document"
+                  className="inline-flex items-center gap-1.5 text-[12px] font-medium transition-colors"
+                  style={{
+                    padding: '7px 16px', borderRadius: 8, color: 'var(--color-text-secondary)',
+                    border: '1px solid var(--color-border)', background: 'transparent',
+                    boxShadow: '0 1px 2px rgba(0,0,0,0.06)', cursor: 'pointer',
+                  }}
+                >
+                  <Mail size={13} />
+                  Email Me
+                </button>
                 {!chatOpen && (
                   <button
                     onClick={() => setChatOpen(true)}
                     title="Chat with document"
-                    className="ask-ai-btn shrink-0 inline-flex items-center gap-1.5 text-[11px] font-semibold transition-all"
+                    className="ask-ai-btn shrink-0 inline-flex items-center gap-1.5 text-[12px] font-semibold transition-all"
                     style={{
-                      padding: '6px 14px', borderRadius: 999, color: '#fff',
+                      padding: '7px 16px', borderRadius: 999, color: '#fff',
                       background: 'linear-gradient(135deg, #459e8c, #56BFA8)',
                       border: 'none', boxShadow: '0 1px 4px rgba(86,191,168,0.3)',
                       cursor: 'pointer', position: 'relative', overflow: 'hidden',
                     }}
                   >
-                    <Sparkles size={12} />
+                    <Sparkles size={13} />
                     Ask AI
                   </button>
                 )}
-                <button
-                  onClick={() => {}}
-                  title="Email this document"
-                  className="inline-flex items-center gap-1.5 text-[11px] font-medium transition-colors"
-                  style={{
-                    padding: '5px 12px', borderRadius: 8, color: 'var(--color-text-secondary)',
-                    border: '1px solid var(--color-border)', background: 'transparent',
-                    boxShadow: '0 1px 2px rgba(0,0,0,0.06)', cursor: 'pointer',
-                  }}
-                >
-                  <Mail size={12} />
-                  Email Me
-                </button>
-                <a
-                  href={getContentUrl(doc.id, true)}
-                  download={doc.name}
-                  className="inline-flex items-center gap-1.5 text-[11px] font-medium transition-colors"
-                  style={{
-                    padding: '5px 12px', borderRadius: 8, color: 'var(--color-text-secondary)',
-                    border: '1px solid var(--color-border)', background: 'transparent',
-                    boxShadow: '0 1px 2px rgba(0,0,0,0.06)', textDecoration: 'none',
-                  }}
-                >
-                  <Download size={12} />
-                  Download
-                </a>
               </>
             } />
           ) : (

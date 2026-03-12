@@ -386,6 +386,21 @@ html.light .rpv-dark-theme .rpv-core__page-layer { box-shadow: 0 2px 8px rgba(0,
   }
 }
 
+/* Stop button glow while streaming */
+@keyframes stopGlow {
+  0%, 100% {
+    box-shadow: 0 0 4px rgba(86, 191, 168, 0.4);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: 0 0 14px rgba(86, 191, 168, 0.7), 0 0 28px rgba(86, 191, 168, 0.3);
+    transform: scale(1.05);
+  }
+}
+.stop-btn-glow {
+  animation: stopGlow 2s ease-in-out infinite;
+}
+
 /* Exact chip enter animation */
 @keyframes chipIn {
   from { opacity: 0; transform: scale(0.9); }

@@ -393,6 +393,7 @@ export default function ChatPage() {
               {streaming ? (
                 <button
                   type="button"
+                  className="stop-btn-glow"
                   onClick={stopStreaming}
                   style={{
                     background: 'var(--color-accent)',

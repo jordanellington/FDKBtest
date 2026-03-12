@@ -14,13 +14,14 @@ export default function PortalNav({ user, onSearchClick }) {
     <div
       style={{
         background: '#0F4859',
+        height: 44,
         position: 'sticky',
         top: 0,
         zIndex: 200,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        padding: '10px 24px',
+        padding: '0 24px',
         fontFamily: "'DM Sans', -apple-system, system-ui, sans-serif",
       }}
     >

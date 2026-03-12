@@ -46,7 +46,7 @@ function DistributionBadge({ classification }) {
   );
 }
 
-function PdfViewer({ fileUrl, searchQuery }) {
+function PdfViewer({ fileUrl, searchQuery, actionButtons }) {
   // searchQuery can be a string (legacy) or array of strings (AI highlight terms)
   const firstKeyword = Array.isArray(searchQuery) ? searchQuery[0] : searchQuery;
   const toolbarPluginInstance = toolbarPlugin();
@@ -67,7 +67,6 @@ function PdfViewer({ fileUrl, searchQuery }) {
     const terms = Array.isArray(searchQuery) ? searchQuery : [searchQuery];
     const timer = setTimeout(() => {
       highlightDone.current = true;
-      // highlight() accepts SingleKeyword[] — highlight all terms at once
       searchPluginRef.current.highlight(terms).then((matches) => {
         if (matches.length > 0) {
           searchPluginRef.current.jumpToMatch(1);
@@ -77,131 +76,15 @@ function PdfViewer({ fileUrl, searchQuery }) {
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
+  const toolBtnStyle = {
+    background: 'none', border: 'none', cursor: 'pointer',
+    color: 'var(--color-text-muted)', padding: '4px 6px', borderRadius: 4,
+    display: 'flex', alignItems: 'center',
+  };
+
   return (
     <Worker workerUrl={WORKER_URL}>
       <div className="h-full flex flex-col rpv-dark-theme" style={{ backgroundColor: 'var(--color-bg-elevated)' }}>
-        {/* Custom toolbar */}
-        <div
-          className="viewer-toolbar shrink-0 flex items-center justify-between"
-          style={{
-            padding: '6px 12px',
-            background: 'var(--color-bg-secondary)',
-            borderBottom: '1px solid rgba(255,255,255,0.04)',
-          }}
-        >
-          <Toolbar>
-            {(props) => {
-              const {
-                CurrentPageInput,
-                GoToNextPage,
-                GoToPreviousPage,
-                NumberOfPages,
-                ZoomIn,
-                ZoomOut,
-                Zoom,
-              } = props;
-              return (
-                <div className="flex items-center gap-1 w-full" style={{ fontSize: 12 }}>
-                  {/* Page navigation */}
-                  <div className="flex items-center gap-1">
-                    <GoToPreviousPage>
-                      {(props) => (
-                        <button
-                          onClick={props.onClick}
-                          disabled={props.isDisabled}
-                          style={{
-                            background: 'none', border: 'none', cursor: props.isDisabled ? 'default' : 'pointer',
-                            color: props.isDisabled ? '#3c4b46' : '#9aa69f', padding: '4px 6px', borderRadius: 4,
-                            display: 'flex', alignItems: 'center',
-                          }}
-                        >
-                          ‹
-                        </button>
-                      )}
-                    </GoToPreviousPage>
-                    <div className="flex items-center gap-1" style={{ color: '#9aa69f' }}>
-                      <CurrentPageInput />
-                      <span style={{ color: '#5f706a' }}>/</span>
-                      <NumberOfPages />
-                    </div>
-                    <GoToNextPage>
-                      {(props) => (
-                        <button
-                          onClick={props.onClick}
-                          disabled={props.isDisabled}
-                          style={{
-                            background: 'none', border: 'none', cursor: props.isDisabled ? 'default' : 'pointer',
-                            color: props.isDisabled ? '#3c4b46' : '#9aa69f', padding: '4px 6px', borderRadius: 4,
-                            display: 'flex', alignItems: 'center',
-                          }}
-                        >
-                          ›
-                        </button>
-                      )}
-                    </GoToNextPage>
-                  </div>
-
-                  {/* Spacer */}
-                  <div style={{ flex: 1 }} />
-
-                  {/* Search */}
-                  <ShowSearchPopover>
-                    {(props) => (
-                      <button
-                        onClick={props.onClick}
-                        style={{
-                          background: 'none', border: 'none', cursor: 'pointer',
-                          color: '#9aa69f', padding: '4px 6px', borderRadius: 4,
-                          display: 'flex', alignItems: 'center',
-                        }}
-                      >
-                        <Search size={13} />
-                      </button>
-                    )}
-                  </ShowSearchPopover>
-
-                  {/* Zoom */}
-                  <div className="flex items-center gap-1">
-                    <ZoomOut>
-                      {(props) => (
-                        <button
-                          onClick={props.onClick}
-                          style={{
-                            background: 'none', border: 'none', cursor: 'pointer',
-                            color: '#9aa69f', padding: '4px 8px', borderRadius: 4, fontSize: 14,
-                          }}
-                        >
-                          −
-                        </button>
-                      )}
-                    </ZoomOut>
-                    <Zoom>
-                      {(props) => (
-                        <span style={{ color: '#9aa69f', fontSize: 11, minWidth: 40, textAlign: 'center' }}>
-                          {Math.round(props.scale * 100)}%
-                        </span>
-                      )}
-                    </Zoom>
-                    <ZoomIn>
-                      {(props) => (
-                        <button
-                          onClick={props.onClick}
-                          style={{
-                            background: 'none', border: 'none', cursor: 'pointer',
-                            color: '#9aa69f', padding: '4px 8px', borderRadius: 4, fontSize: 14,
-                          }}
-                        >
-                          +
-                        </button>
-                      )}
-                    </ZoomIn>
-                  </div>
-                </div>
-              );
-            }}
-          </Toolbar>
-        </div>
-
         {/* PDF pages */}
         <div className="flex-1 min-h-0" style={{ background: '#3a3d41' }}>
           <Viewer
@@ -209,6 +92,73 @@ function PdfViewer({ fileUrl, searchQuery }) {
             plugins={[toolbarPluginInstance, searchPluginInstance]}
             theme="dark"
           />
+        </div>
+
+        {/* Unified bottom bar: page nav + zoom + action buttons */}
+        <div
+          className="shrink-0"
+          style={{
+            background: 'var(--color-bg-elevated)',
+            borderTop: '1px solid var(--color-border)',
+            boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.04)',
+          }}
+        >
+          <Toolbar>
+            {(props) => {
+              const { CurrentPageInput, GoToNextPage, GoToPreviousPage, NumberOfPages, ZoomIn, ZoomOut, Zoom } = props;
+              return (
+                <div className="flex items-center justify-between" style={{ padding: '6px 12px', fontSize: 12 }}>
+                  {/* Left: page nav + zoom + search */}
+                  <div className="flex items-center" style={{ gap: 2 }}>
+                    <GoToPreviousPage>
+                      {(p) => (
+                        <button onClick={p.onClick} disabled={p.isDisabled}
+                          style={{ ...toolBtnStyle, cursor: p.isDisabled ? 'default' : 'pointer', opacity: p.isDisabled ? 0.3 : 1 }}>
+                          ‹
+                        </button>
+                      )}
+                    </GoToPreviousPage>
+                    <div className="flex items-center gap-1" style={{ color: 'var(--color-text-muted)' }}>
+                      <CurrentPageInput />
+                      <span style={{ opacity: 0.5 }}>/</span>
+                      <NumberOfPages />
+                    </div>
+                    <GoToNextPage>
+                      {(p) => (
+                        <button onClick={p.onClick} disabled={p.isDisabled}
+                          style={{ ...toolBtnStyle, cursor: p.isDisabled ? 'default' : 'pointer', opacity: p.isDisabled ? 0.3 : 1 }}>
+                          ›
+                        </button>
+                      )}
+                    </GoToNextPage>
+
+                    <div style={{ width: 1, height: 16, background: 'var(--color-border)', margin: '0 6px' }} />
+
+                    <ZoomOut>
+                      {(p) => <button onClick={p.onClick} style={{ ...toolBtnStyle, fontSize: 14, padding: '4px 6px' }}>−</button>}
+                    </ZoomOut>
+                    <Zoom>
+                      {(p) => <span style={{ color: 'var(--color-text-muted)', fontSize: 11, minWidth: 36, textAlign: 'center' }}>{Math.round(p.scale * 100)}%</span>}
+                    </Zoom>
+                    <ZoomIn>
+                      {(p) => <button onClick={p.onClick} style={{ ...toolBtnStyle, fontSize: 14, padding: '4px 6px' }}>+</button>}
+                    </ZoomIn>
+
+                    <div style={{ width: 1, height: 16, background: 'var(--color-border)', margin: '0 6px' }} />
+
+                    <ShowSearchPopover>
+                      {(p) => <button onClick={p.onClick} style={toolBtnStyle}><Search size={13} /></button>}
+                    </ShowSearchPopover>
+                  </div>
+
+                  {/* Right: action buttons */}
+                  <div className="flex items-center" style={{ gap: 8 }}>
+                    {actionButtons}
+                  </div>
+                </div>
+              );
+            }}
+          </Toolbar>
         </div>
       </div>
     </Worker>
@@ -294,7 +244,52 @@ export default function DocumentViewer({ document: doc, searchQuery, onClose, fi
           style={{ flex: '1 1 0%' }}
         >
           {isPdf ? (
-            <PdfViewer fileUrl={contentUrl} searchQuery={searchQuery} />
+            <PdfViewer fileUrl={contentUrl} searchQuery={searchQuery} actionButtons={
+              <>
+                {!chatOpen && (
+                  <button
+                    onClick={() => setChatOpen(true)}
+                    title="Chat with document"
+                    className="ask-ai-btn shrink-0 inline-flex items-center gap-1.5 text-[11px] font-semibold transition-all"
+                    style={{
+                      padding: '6px 14px', borderRadius: 999, color: '#fff',
+                      background: 'linear-gradient(135deg, #459e8c, #56BFA8)',
+                      border: 'none', boxShadow: '0 1px 4px rgba(86,191,168,0.3)',
+                      cursor: 'pointer', position: 'relative', overflow: 'hidden',
+                    }}
+                  >
+                    <Sparkles size={12} />
+                    Ask AI
+                  </button>
+                )}
+                <button
+                  onClick={() => {}}
+                  title="Email this document"
+                  className="inline-flex items-center gap-1.5 text-[11px] font-medium transition-colors"
+                  style={{
+                    padding: '5px 12px', borderRadius: 8, color: 'var(--color-text-secondary)',
+                    border: '1px solid var(--color-border)', background: 'transparent',
+                    boxShadow: '0 1px 2px rgba(0,0,0,0.06)', cursor: 'pointer',
+                  }}
+                >
+                  <Mail size={12} />
+                  Email Me
+                </button>
+                <a
+                  href={getContentUrl(doc.id, true)}
+                  download={doc.name}
+                  className="inline-flex items-center gap-1.5 text-[11px] font-medium transition-colors"
+                  style={{
+                    padding: '5px 12px', borderRadius: 8, color: 'var(--color-text-secondary)',
+                    border: '1px solid var(--color-border)', background: 'transparent',
+                    boxShadow: '0 1px 2px rgba(0,0,0,0.06)', textDecoration: 'none',
+                  }}
+                >
+                  <Download size={12} />
+                  Download
+                </a>
+              </>
+            } />
           ) : (
             <div className="flex items-center justify-center h-full p-6" style={{ background: '#3a3d41' }}>
               <div className="text-center">
@@ -329,70 +324,26 @@ export default function DocumentViewer({ document: doc, searchQuery, onClose, fi
         )}
       </div>
 
-      {/* Action bar */}
-      <div style={{
-        background: 'var(--color-bg-elevated)',
-        borderTop: '1px solid var(--color-border)',
-        boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.04)',
-      }} className="shrink-0">
-        <div className="viewer-meta-bar flex items-center justify-center" style={{ padding: '8px 12px', gap: 8 }}>
-          {isPdf && !chatOpen && (
-            <button
-              onClick={() => setChatOpen(true)}
-              title="Chat with document"
-              className="ask-ai-btn shrink-0 inline-flex items-center gap-1.5 text-[11px] font-semibold transition-all"
-              style={{
-                padding: '6px 14px',
-                borderRadius: 999,
-                color: '#fff',
-                background: 'linear-gradient(135deg, #459e8c, #56BFA8)',
-                border: 'none',
-                boxShadow: '0 1px 4px rgba(86,191,168,0.3)',
-                cursor: 'pointer',
-                position: 'relative',
-                overflow: 'hidden',
-              }}
-            >
-              <Sparkles size={12} />
-              Ask AI
+      {/* Action bar for non-PDF documents */}
+      {!isPdf && (
+        <div style={{
+          background: 'var(--color-bg-elevated)',
+          borderTop: '1px solid var(--color-border)',
+        }} className="shrink-0">
+          <div className="flex items-center justify-center" style={{ padding: '8px 12px', gap: 8 }}>
+            <button onClick={() => {}} title="Email this document"
+              className="inline-flex items-center gap-1.5 text-[11px] font-medium"
+              style={{ padding: '5px 12px', borderRadius: 8, color: 'var(--color-text-secondary)', border: '1px solid var(--color-border)', background: 'transparent', cursor: 'pointer' }}>
+              <Mail size={12} /> Email Me
             </button>
-          )}
-          <button
-            onClick={() => {}}
-            title="Email this document"
-            className="inline-flex items-center gap-1.5 text-[11px] font-medium transition-colors"
-            style={{
-              padding: '5px 12px',
-              borderRadius: 8,
-              color: 'var(--color-text-secondary)',
-              border: '1px solid var(--color-border)',
-              background: 'transparent',
-              boxShadow: '0 1px 2px rgba(0,0,0,0.06)',
-              cursor: 'pointer',
-            }}
-          >
-            <Mail size={12} />
-            Email Me
-          </button>
-          <a
-            href={getContentUrl(doc.id, true)}
-            download={doc.name}
-            className="inline-flex items-center gap-1.5 text-[11px] font-medium transition-colors"
-            style={{
-              padding: '5px 12px',
-              borderRadius: 8,
-              color: 'var(--color-text-secondary)',
-              border: '1px solid var(--color-border)',
-              background: 'transparent',
-              boxShadow: '0 1px 2px rgba(0,0,0,0.06)',
-              textDecoration: 'none',
-            }}
-          >
-            <Download size={12} />
-            Download
-          </a>
+            <a href={getContentUrl(doc.id, true)} download={doc.name}
+              className="inline-flex items-center gap-1.5 text-[11px] font-medium"
+              style={{ padding: '5px 12px', borderRadius: 8, color: 'var(--color-text-secondary)', border: '1px solid var(--color-border)', background: 'transparent', textDecoration: 'none' }}>
+              <Download size={12} /> Download
+            </a>
+          </div>
         </div>
-      </div>
+      )}
     </motion.div>
   );
 }

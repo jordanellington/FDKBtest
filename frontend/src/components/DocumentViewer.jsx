@@ -224,7 +224,7 @@ export default function DocumentViewer({ document: doc, searchQuery, onClose, fi
   // Extract CCC metadata — use pre-set fields (from chat sources) or derive from Alfresco properties
   const meta = extractMetadata(doc);
   const displayTitle = doc.displayTitle || meta.displayTitle || null;
-  const pubTitle = doc.publicationTitle || meta.publicationTitle || null;
+  const pubTitle = doc.publicationTitle || meta.publicationTitle || meta.publisher || null;
   const pubDate = doc.publicationDate || meta.publicationDate || null;
 
   const contentUrl = getContentUrl(doc.id);

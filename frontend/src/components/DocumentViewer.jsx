@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { X, Download, FileText, Shield, ExternalLink, Sparkles, Search, Mail } from 'lucide-react';
+import { X, Download, FileText, ExternalLink, Sparkles, Search, Mail } from 'lucide-react';
 import { classifyDocument, extractMetadata } from '../lib/copyright';
 import { getContentUrl } from '../lib/api';
 
@@ -27,20 +27,23 @@ function formatDateStr(iso) {
 
 function DistributionBadge({ classification }) {
   const config = {
-    green: { color: '#4db8a4', bg: 'rgba(77,184,164,0.10)', border: 'rgba(77,184,164,0.20)' },
-    amber: { color: '#c8a44e', bg: 'rgba(200,164,78,0.10)', border: 'rgba(200,164,78,0.20)' },
-    blue:  { color: '#6ba3e8', bg: 'rgba(107,163,232,0.10)', border: 'rgba(107,163,232,0.20)' },
-    red:   { color: '#C75B5B', bg: 'rgba(199,91,91,0.10)', border: 'rgba(199,91,91,0.20)' },
+    green: { color: '#4db8a4', bg: 'rgba(77,184,164,0.07)' },
+    amber: { color: '#c8a44e', bg: 'rgba(200,164,78,0.07)' },
+    blue:  { color: '#6ba3e8', bg: 'rgba(107,163,232,0.07)' },
+    red:   { color: '#e8836e', bg: 'rgba(232,131,110,0.07)' },
   };
   const c = config[classification.color] || config.red;
 
   return (
     <span
       data-tooltip={classification.tooltip}
-      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full font-medium"
-      style={{ color: c.color, background: c.bg, border: `1px solid ${c.border}`, fontSize: 11 }}
+      className="inline-flex items-center"
+      style={{
+        fontSize: 9, fontWeight: 700, letterSpacing: '0.06em',
+        textTransform: 'uppercase', padding: '3px 10px', borderRadius: 4,
+        color: c.color, background: c.bg,
+      }}
     >
-      <Shield size={10} />
       {classification.label}
     </span>
   );

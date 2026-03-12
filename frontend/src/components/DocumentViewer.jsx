@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { X, Download, FileText, Shield, ExternalLink, ChevronDown, ChevronUp, Sparkles, Search } from 'lucide-react';
+import { X, Download, FileText, Shield, ExternalLink, Sparkles, Search, Mail } from 'lucide-react';
 import { classifyDocument, extractMetadata } from '../lib/copyright';
 import { getContentUrl } from '../lib/api';
 
@@ -216,7 +216,6 @@ function PdfViewer({ fileUrl, searchQuery }) {
 }
 
 export default function DocumentViewer({ document: doc, searchQuery, onClose, fillContainer }) {
-  const [detailsOpen, setDetailsOpen] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
 
   if (!doc) return null;
@@ -230,11 +229,6 @@ export default function DocumentViewer({ document: doc, searchQuery, onClose, fi
   const contentUrl = getContentUrl(doc.id);
   const isPdf = doc?.name?.toLowerCase().endsWith('.pdf');
 
-  const path = doc.path?.name?.replace('/Company Home/Sites/FDKB-staging/documentlibrary/', '') || '';
-  const pages = doc.properties?.['eci:pages'] || '—';
-  const size = doc.content?.sizeInBytes
-    ? (doc.content.sizeInBytes / 1024 / 1024).toFixed(2) + ' MB'
-    : '—';
   const classification = classifyDocument(doc);
 
   return (
@@ -335,159 +329,71 @@ export default function DocumentViewer({ document: doc, searchQuery, onClose, fi
         )}
       </div>
 
-      {/* Compact metadata bar + expandable details */}
+      {/* Action bar */}
       <div style={{
         background: 'var(--color-bg-elevated)',
         borderTop: '1px solid var(--color-border)',
         boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.04)',
       }} className="shrink-0">
-        <div className="viewer-meta-bar flex items-center text-[11px]" style={{ padding: '10px 12px 10px 16px', gap: 10 }}>
-          {/* Left: metadata with dot separators + classification pill */}
-          <div className="flex items-center gap-2 min-w-0 flex-1" style={{ color: 'var(--color-text-muted)' }}>
-            {[meta.author, meta.date, pages !== '—' ? `${pages} pg` : null, size !== '—' ? size : null]
-              .filter(v => v && v !== '—')
-              .map((item, i, arr) => (
-                <span key={i} className="flex items-center gap-2 whitespace-nowrap">
-                  {item}
-                  {i < arr.length - 1 && <span style={{ opacity: 0.4 }}>·</span>}
-                </span>
-              ))}
-            <span style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 5,
-              padding: '2px 8px',
-              borderRadius: 999,
-              fontSize: 10,
-              fontWeight: 600,
-              letterSpacing: '0.03em',
-              color: classification.color === 'green' ? '#4db8a4' : classification.color === 'amber' ? '#c8a44e' : classification.color === 'red' ? '#C75B5B' : '#6ba3e8',
-              background: classification.color === 'green' ? 'rgba(77,184,164,0.08)' : classification.color === 'amber' ? 'rgba(200,164,78,0.08)' : classification.color === 'red' ? 'rgba(199,91,91,0.08)' : 'rgba(107,163,232,0.08)',
-            }}>
-              <span style={{
-                width: 6, height: 6, borderRadius: '50%',
-                background: classification.color === 'green' ? '#4db8a4' : classification.color === 'amber' ? '#c8a44e' : classification.color === 'red' ? '#C75B5B' : '#6ba3e8',
-              }} />
-              {classification.label}
-            </span>
-          </div>
-
-          {/* Right: action buttons */}
-          <div className="flex items-center shrink-0" style={{ gap: 6 }}>
-            <a
-              href={getContentUrl(doc.id, true)}
-              download={doc.name}
-              className="inline-flex items-center gap-1.5 text-[11px] font-medium transition-colors"
-              style={{
-                padding: '5px 12px',
-                borderRadius: 8,
-                color: 'var(--color-text-secondary)',
-                border: '1px solid var(--color-border)',
-                background: 'transparent',
-                boxShadow: '0 1px 2px rgba(0,0,0,0.06)',
-                textDecoration: 'none',
-              }}
-            >
-              <Download size={12} />
-              Download
-            </a>
+        <div className="viewer-meta-bar flex items-center justify-end" style={{ padding: '8px 12px', gap: 8 }}>
+          {isPdf && (
             <button
-              onClick={() => setDetailsOpen(!detailsOpen)}
-              title={detailsOpen ? 'Hide details' : 'Show details'}
-              className="transition-colors"
+              onClick={() => setChatOpen(!chatOpen)}
+              title={chatOpen ? 'Close AI chat' : 'Chat with document'}
+              className="ask-ai-btn shrink-0 inline-flex items-center gap-1.5 text-[11px] font-semibold transition-all"
               style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                width: 30, height: 30, borderRadius: 8,
-                border: '1px solid var(--color-border)',
-                background: 'transparent',
-                color: 'var(--color-text-muted)',
-                boxShadow: '0 1px 2px rgba(0,0,0,0.06)',
+                padding: '6px 14px',
+                borderRadius: 999,
+                color: '#fff',
+                background: chatOpen
+                  ? 'linear-gradient(135deg, #3d9485, #56BFA8)'
+                  : 'linear-gradient(135deg, #459e8c, #56BFA8)',
+                border: 'none',
+                boxShadow: '0 1px 4px rgba(86,191,168,0.3)',
                 cursor: 'pointer',
+                position: 'relative',
+                overflow: 'hidden',
               }}
             >
-              {detailsOpen ? <ChevronDown size={14} /> : <ChevronUp size={14} />}
+              <Sparkles size={12} />
+              Ask AI
             </button>
-            {isPdf && (
-              <>
-                <div style={{ width: 1, height: 20, background: 'var(--color-border)', margin: '0 4px' }} />
-                <button
-                  onClick={() => setChatOpen(!chatOpen)}
-                  title={chatOpen ? 'Close AI chat' : 'Chat with document'}
-                  className="ask-ai-btn shrink-0 inline-flex items-center gap-1.5 text-[11px] font-semibold transition-all"
-                  style={{
-                    padding: '6px 14px',
-                    borderRadius: 999,
-                    color: '#fff',
-                    background: chatOpen
-                      ? 'linear-gradient(135deg, #3d9485, #56BFA8)'
-                      : 'linear-gradient(135deg, #459e8c, #56BFA8)',
-                    border: 'none',
-                    boxShadow: '0 1px 4px rgba(86,191,168,0.3)',
-                    cursor: 'pointer',
-                    position: 'relative',
-                    overflow: 'hidden',
-                  }}
-                >
-                  <Sparkles size={12} />
-                  Ask AI
-                </button>
-              </>
-            )}
-          </div>
+          )}
+          <button
+            onClick={() => {}}
+            title="Email this document"
+            className="inline-flex items-center gap-1.5 text-[11px] font-medium transition-colors"
+            style={{
+              padding: '5px 12px',
+              borderRadius: 8,
+              color: 'var(--color-text-secondary)',
+              border: '1px solid var(--color-border)',
+              background: 'transparent',
+              boxShadow: '0 1px 2px rgba(0,0,0,0.06)',
+              cursor: 'pointer',
+            }}
+          >
+            <Mail size={12} />
+            Email Me
+          </button>
+          <a
+            href={getContentUrl(doc.id, true)}
+            download={doc.name}
+            className="inline-flex items-center gap-1.5 text-[11px] font-medium transition-colors"
+            style={{
+              padding: '5px 12px',
+              borderRadius: 8,
+              color: 'var(--color-text-secondary)',
+              border: '1px solid var(--color-border)',
+              background: 'transparent',
+              boxShadow: '0 1px 2px rgba(0,0,0,0.06)',
+              textDecoration: 'none',
+            }}
+          >
+            <Download size={12} />
+            Download
+          </a>
         </div>
-
-        {detailsOpen && (
-          <div style={{ padding: '4px 16px 14px', borderTop: '1px solid rgba(255,255,255,0.04)' }}>
-            {/* Article title if CCC-enriched */}
-            {meta.articleTitle && (
-              <div style={{ marginBottom: 10 }}>
-                <p className="text-[9px] text-text-muted uppercase tracking-wider mb-1">Article Title</p>
-                <p className="text-[12px] text-text-primary font-medium leading-snug">{meta.articleTitle}</p>
-              </div>
-            )}
-            <div className="details-grid grid grid-cols-3 gap-3">
-              <div>
-                <p className="text-[9px] text-text-muted uppercase tracking-wider mb-1">{meta.publicationTitle ? 'Publication' : 'Topic'}</p>
-                <p className="text-[11px] text-text-secondary">{meta.publicationTitle || meta.topic}</p>
-              </div>
-              <div>
-                <p className="text-[9px] text-text-muted uppercase tracking-wider mb-1">Publisher</p>
-                <p className="text-[11px] text-text-secondary">{meta.publisher}</p>
-              </div>
-              <div>
-                <p className="text-[9px] text-text-muted uppercase tracking-wider mb-1">Distribution</p>
-                <p className="text-[11px] text-text-secondary">{classification.tooltip?.split('\n')[0]}</p>
-              </div>
-            </div>
-            {/* Extra CCC fields */}
-            {meta.cccEnriched && (
-              <div className="details-grid grid grid-cols-3 gap-3" style={{ marginTop: 8 }}>
-                {meta.issn && (
-                  <div>
-                    <p className="text-[9px] text-text-muted uppercase tracking-wider mb-1">ISSN</p>
-                    <p className="text-[11px] text-text-secondary">{meta.issn}</p>
-                  </div>
-                )}
-                {meta.copyrightHolder && (
-                  <div>
-                    <p className="text-[9px] text-text-muted uppercase tracking-wider mb-1">Copyright</p>
-                    <p className="text-[11px] text-text-secondary">{meta.copyrightHolder}</p>
-                  </div>
-                )}
-                {meta.publicationDate && (
-                  <div>
-                    <p className="text-[9px] text-text-muted uppercase tracking-wider mb-1">Published</p>
-                    <p className="text-[11px] text-text-secondary">{meta.publicationDate}</p>
-                  </div>
-                )}
-              </div>
-            )}
-            <div style={{ marginTop: 8 }}>
-              <p className="text-[9px] text-text-muted uppercase tracking-wider mb-1">Path</p>
-              <p className="text-[10px] text-text-muted bg-bg-elevated rounded-md p-2 break-all leading-relaxed">{path || '—'}</p>
-            </div>
-          </div>
-        )}
       </div>
     </motion.div>
   );

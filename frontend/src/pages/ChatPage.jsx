@@ -135,34 +135,37 @@ export default function ChatPage() {
     return words.size > 0 ? [...words] : null;
   };
 
-  const openDoc = (doc) => {
-    // Use ref for highlights — always has latest value regardless of React render cycle
-    const hl = highlightsRef.current;
-    let docHighlights = null;
-    if (hl && Object.keys(hl).length > 0) {
-      // Try exact match
-      docHighlights = hl[doc.name] || null;
-      // Case-insensitive
-      if (!docHighlights) {
-        const key = Object.keys(hl).find(k => k.toLowerCase() === doc.name?.toLowerCase());
-        if (key) docHighlights = hl[key];
-      }
-      // Partial match — filename stem contained in key or vice versa
-      if (!docHighlights) {
-        const stem = doc.name?.replace(/\.PDF$/i, '').toLowerCase();
-        if (stem) {
-          const key = Object.keys(hl).find(k => {
-            const kStem = k.replace(/\.PDF$/i, '').toLowerCase();
-            return kStem.includes(stem) || stem.includes(kStem);
-          });
+  const openDoc = (doc, { highlight = true } = {}) => {
+    let searchTerms = null;
+    if (highlight) {
+      // Use ref for highlights — always has latest value regardless of React render cycle
+      const hl = highlightsRef.current;
+      let docHighlights = null;
+      if (hl && Object.keys(hl).length > 0) {
+        // Try exact match
+        docHighlights = hl[doc.name] || null;
+        // Case-insensitive
+        if (!docHighlights) {
+          const key = Object.keys(hl).find(k => k.toLowerCase() === doc.name?.toLowerCase());
           if (key) docHighlights = hl[key];
         }
+        // Partial match — filename stem contained in key or vice versa
+        if (!docHighlights) {
+          const stem = doc.name?.replace(/\.PDF$/i, '').toLowerCase();
+          if (stem) {
+            const key = Object.keys(hl).find(k => {
+              const kStem = k.replace(/\.PDF$/i, '').toLowerCase();
+              return kStem.includes(stem) || stem.includes(kStem);
+            });
+            if (key) docHighlights = hl[key];
+          }
+        }
       }
+      searchTerms = docHighlights
+        ? docHighlights  // pass AI phrases directly — multi-word verbatim matches are more precise
+        : (doc.snippet ? phrasesToWords([doc.snippet]) : null);
+      console.log('[openDoc] name:', doc.name, 'hlKeys:', hl ? Object.keys(hl) : 'none', 'matched:', !!docHighlights, 'terms:', searchTerms);
     }
-    const searchTerms = docHighlights
-      ? docHighlights  // pass AI phrases directly — multi-word verbatim matches are more precise
-      : (doc.snippet ? phrasesToWords([doc.snippet]) : null);
-    console.log('[openDoc] name:', doc.name, 'hlKeys:', hl ? Object.keys(hl) : 'none', 'matched:', !!docHighlights, 'terms:', searchTerms);
     setSearchQuery(searchTerms);
     setViewerDoc({
       id: doc.nodeId,
@@ -735,7 +738,7 @@ function MessageBubble({ msg, onOpenDoc }) {
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             {msg.sources.map((src, i) => (
-              <SourceCard key={i} source={src} onClick={() => onOpenDoc(src)} />
+              <SourceCard key={i} source={src} onClick={() => onOpenDoc(src, { highlight: false })} />
             ))}
           </div>
         </div>

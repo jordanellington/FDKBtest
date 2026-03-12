@@ -160,7 +160,7 @@ export default function ChatPage() {
       }
     }
     const searchTerms = docHighlights
-      ? phrasesToWords(docHighlights)
+      ? docHighlights  // pass AI phrases directly — multi-word verbatim matches are more precise
       : (doc.snippet ? phrasesToWords([doc.snippet]) : null);
     console.log('[openDoc] name:', doc.name, 'hlKeys:', hl ? Object.keys(hl) : 'none', 'matched:', !!docHighlights, 'terms:', searchTerms);
     setSearchQuery(searchTerms);

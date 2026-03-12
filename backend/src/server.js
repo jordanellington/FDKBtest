@@ -830,12 +830,15 @@ CITATION RULES:
 - Do not fabricate content not present in the provided sections
 
 SEARCH TERMS (REQUIRED):
-After your answer, you MUST output a <search_terms> block containing a JSON object that maps each cited document filename to an array of 3-5 specific phrases or key terms that appear verbatim in that document and are most relevant to the answer. These will be used to highlight relevant passages when the user opens the document.
-- Use phrases that actually appear in the source text (2-6 words each)
-- Pick the most informative, specific phrases — not generic words
+After your answer, you MUST output a <search_terms> block containing a JSON object that maps each cited document filename to an array of 3-5 verbatim phrases from that document's source text. These phrases will be used to highlight the exact relevant passages when the user opens the document.
+- Each phrase MUST be 4-10 words that appear EXACTLY as written in the source text
+- Pick phrases that uniquely identify the specific passage you referenced — not topic-generic terms
+- NEVER use single common words like "cloning" or "research" — always use multi-word phrases
+- Good: "statutory ban on cloning as early as 1990", "federal funding of such work is banned"
+- Bad: "cloning", "research", "ban" (too generic, highlights everything)
 - Format exactly like this (no other text inside the tags):
 <search_terms>
-{"12.1.0003.PDF": ["statutory ban on cloning", "Federal Embryo Protection Act", "five years imprisonment"], "12.1.0009.PDF": ["banned creation of embryos", "research purposes"]}
+{"12.1.0003.PDF": ["statutory ban on cloning as early as 1990", "Federal Embryo Protection Act", "penalty of five years imprisonment"], "12.1.0009.PDF": ["banned creation of embryos for research purposes"]}
 </search_terms>`;
 
     const bedrockMessages = [
